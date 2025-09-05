@@ -448,6 +448,114 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
 
       console.log('❌ Plataforma não suportada:', platform);
       throw new Error('Plataforma não suportada para teste');
+    }
+  } catch (error) {
+    console.error('💥 Erro completo em generateVoiceTest:', error);
+    console.error('Erro ao gerar teste de voz:', error);
+    throw error;
+  }
+};
+
+const handleVoiceTest = async (voiceId: number): Promise<string | null> => {
+  try {
+    // Get voice data
+    const voice = voices.find(v => v.id === voiceId);
+    if (!voice) {
+      throw new Error('Voz não encontrada');
+    }
+
+    // Get API key for the platform
+    const { data: apisData } = await supabase
+      .from('apis')
+      .select('*')
+      .eq('plataforma', voice.plataforma)
+      .single();
+
+    if (!apisData) {
+      throw new Error(`API key não encontrada para ${voice.plataforma}`);
+    }
+
+    const testText = "Olá! Este é um teste de voz para verificar a qualidade e o som desta voz artificial.";
+
+    if (voice.plataforma === 'ElevenLabs') {
+      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice.voice_id}`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'audio/mpeg',
+          'Content-Type': 'application/json',
+          'xi-api-key': apisData.api_key
+        },
+        body: JSON.stringify({
+          text: testText,
+          model_id: "eleven_multilingual_v2",
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.5
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro ElevenLabs: ${response.status} - ${errorText}`);
+      }
+
+      const audioBlob = await response.blob();
+      return URL.createObjectURL(audioBlob);
+
+    } else if (voice.plataforma === 'Fish-Audio') {
+      const requestBody = {
+        text: testText,
+        reference_id: voice.voice_id,
+        format: "mp3"
+      };
+
+      const requestHeaders = {
+        'Authorization': `Bearer ${apisData.api_key}`,
+        'Content-Type': 'application/json',
+        'Accept': 'audio/mpeg'
+      };
+
+      console.log('🐟 Fish-Audio Request Body:', requestBody);
+      console.log('🐟 Fish-Audio Request Headers:', { ...requestHeaders, 'Authorization': 'Bearer [MASKED]' });
+
+      const response = await fetch('https://api.fish.audio/v1/tts', {
+        method: 'POST',
+        headers: requestHeaders,
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log('🐟 Fish-Audio Response Headers:', Object.fromEntries(response.headers.entries()));
+      console.log('🐟 Response OK:', response.ok);
+      console.log('🐟 Fish-Audio Response Status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log('🐟 Fish-Audio Error Text:', errorText);
+        
+        let errorMessage = `Erro Fish-Audio: ${response.status}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage += ` - ${errorJson.message || errorJson.error || errorText}`;
+        } catch {
+          errorMessage += ` - ${errorText}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const audioBlob = await response.blob();
+      console.log('🐟 Fish-Audio Blob Info:', { size: audioBlob.size, type: audioBlob.type });
+      
+      if (audioBlob.size === 0) {
+        throw new Error('Fish-Audio retornou áudio vazio');
+      }
+      
+      return URL.createObjectURL(audioBlob);
+    }
+
+    console.log('❌ Plataforma não suportada:', voice.plataforma);
+    throw new Error('Plataforma não suportada para teste');
     } catch (error) {
       console.error('💥 Erro completo em generateVoiceTest:', error);
       console.error('Erro ao gerar teste de voz:', error);
