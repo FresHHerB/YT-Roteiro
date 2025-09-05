@@ -741,6 +741,25 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
     'Fish-Audio': voices.filter(v => v.plataforma === 'Fish-Audio').length
   };
 
+  // Voice preview function for form
+  const playVoicePreview = async () => {
+    if (voiceForm.voice_id && voiceForm.nome_voz) {
+      const tempVoice: Voice = {
+        id: 0, // Temporary ID for preview
+        nome_voz: voiceForm.nome_voz,
+        voice_id: voiceForm.voice_id,
+        plataforma: voiceForm.plataforma,
+        idioma: voiceForm.idioma,
+        genero: voiceForm.genero,
+        preview_url: voiceForm.preview_url,
+        audio_file_path: voiceForm.audio_file_path,
+        created_at: new Date().toISOString()
+      };
+      
+      await playVoicePreview(tempVoice);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
       {/* Header */}
@@ -1088,22 +1107,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                       Teste de Voz
                     </label>
                     <button
-                      onClick={async () => {
-                        if (voiceForm.voice_id && voiceForm.nome_voz) {
-                          const mockVoice: Voice = {
-                            id: 0,
-                            nome_voz: voiceForm.nome_voz,
-                            voice_id: voiceForm.voice_id,
-                            plataforma: voiceForm.plataforma,
-                            idioma: voiceForm.idioma,
-                            genero: voiceForm.genero,
-                            preview_url: voiceForm.preview_url,
-                            audio_file_path: voiceForm.audio_file_path,
-                            created_at: new Date().toISOString()
-                          };
-                          await playVoicePreview(mockVoice);
-                        }
-                      }}
+                      onClick={playVoicePreview}
                       className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
                         isAudioPlaying(`voice-0`)
                           ? 'bg-red-600 hover:bg-red-700 text-white'
