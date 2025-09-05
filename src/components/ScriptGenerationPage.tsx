@@ -333,7 +333,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         speed: audioSpeed
       };
 
-      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook/gerarAudio', {
+      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook-test/gerarAudio', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
