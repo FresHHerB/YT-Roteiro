@@ -525,45 +525,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
 
   const handleVoiceIdChange = async (voiceId: string) => {
     setVoiceForm(prev => ({ ...prev, voice_id: voiceId }));
-    setVoiceSearchError('');
-    
-    if (voiceId.trim()) {
-      setIsSearchingVoice(true);
-      try {
-        const voiceData = await searchVoiceData(voiceId, voiceForm.plataforma);
-        if (voiceData) {
-          setVoiceForm(prev => ({
-            ...prev,
-            nome_voz: voiceData.name,
-            idioma: voiceData.language || '',
-            genero: voiceData.gender || '',
-            preview_url: voiceData.preview_url || ''
-          }));
-        }
-      } catch (error) {
-        // Error is already handled in searchVoiceData
-        setVoiceForm(prev => ({
-          ...prev,
-          nome_voz: '',
-          idioma: '',
-          genero: '',
-          preview_url: '',
-          audio_file_path: null
-        }));
-      } finally {
-        setIsSearchingVoice(false);
-      }
-    } else {
-      setVoiceForm(prev => ({
-        ...prev,
-        nome_voz: '',
-        idioma: '',
-        genero: '',
-        preview_url: '',
-        audio_file_path: null
-      }));
-    }
-  };
 
   const addVoice = async () => {
     if (!voiceForm.voice_id.trim() || !voiceForm.nome_voz.trim()) {
