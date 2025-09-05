@@ -979,6 +979,31 @@ const VoiceCard: React.FC<VoiceCardProps> = ({ voice, onEdit, onDelete, onPlayPr
     });
   };
 
+  // Função para determinar as cores baseadas na plataforma
+  const getPlatformColors = (platform: string) => {
+    switch (platform) {
+      case 'ElevenLabs':
+        return {
+          bg: 'bg-purple-900/30',
+          text: 'text-purple-400',
+          border: 'border-purple-800'
+        };
+      case 'Fish-Audio':
+        return {
+          bg: 'bg-cyan-900/30',
+          text: 'text-cyan-400',
+          border: 'border-cyan-800'
+        };
+      default:
+        return {
+          bg: 'bg-blue-900/30',
+          text: 'text-blue-400',
+          border: 'border-blue-800'
+        };
+    }
+  };
+
+  const platformColors = getPlatformColors(voice.plataforma);
   return (
     <div className="bg-black/30 border border-gray-700 rounded-xl p-4 hover:border-gray-600 transition-all duration-200">
       <div className="flex items-start justify-between mb-3">
@@ -986,7 +1011,9 @@ const VoiceCard: React.FC<VoiceCardProps> = ({ voice, onEdit, onDelete, onPlayPr
           <h4 className="font-medium text-white mb-1">{voice.nome_voz}</h4>
           <p className="text-sm text-gray-400 mb-2">ID: {voice.voice_id}</p>
           <div className="flex items-center space-x-4 text-xs text-gray-500">
-            <span className="px-2 py-1 bg-gray-800 rounded-md">{voice.plataforma}</span>
+            <span className={`px-2 py-1 ${platformColors.bg} ${platformColors.text} border ${platformColors.border} rounded-md font-medium`}>
+              {voice.plataforma}
+            </span>
             {voice.idioma && <span>{voice.idioma}</span>}
             {voice.genero && <span>{voice.genero}</span>}
           </div>
