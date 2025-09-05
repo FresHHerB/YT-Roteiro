@@ -855,4 +855,293 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                   >
                     Cancelar
                   </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingVoice}
+                    className={`
+                      flex items-center space-x-2 px-6 py-2 rounded-lg font-medium transition-all duration-200
+                      ${isSubmittingVoice
+                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      }
+                    `}
+                  >
+                    {isSubmittingVoice ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>{editingVoice ? 'Atualizar' : 'Salvar'}</span>
+                      </>
+                    )}
+                  </button>
                 </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* API Form Modal */}
+      {showApiForm && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-50"
+          onClick={() => resetApiForm()}
+        >
+          <div 
+            className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-medium text-white">
+                  {editingApi ? 'Editar API' : 'Adicionar API'}
+                </h3>
+                <button
+                  onClick={resetApiForm}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleApiSubmit} className="space-y-4">
+                {/* Platform Selection */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Plataforma
+                  </label>
+                  <select
+                    value={apiForm.plataforma}
+                    onChange={(e) => setApiForm(prev => ({ ...prev, plataforma: e.target.value }))}
+                    className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all duration-200 text-white"
+                  >
+                    <option value="ElevenLabs">ElevenLabs</option>
+                    <option value="Fish-Audio">Fish-Audio</option>
+                  </select>
+                </div>
+
+                {/* API Key */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-300">
+                    API Key
+                  </label>
+                  <input
+                    type="password"
+                    value={apiForm.api_key}
+                    onChange={(e) => setApiForm(prev => ({ ...prev, api_key: e.target.value }))}
+                    placeholder="Digite a API Key"
+                    className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
+                    required
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={resetApiForm}
+                    className="px-6 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingApi}
+                    className={`
+                      flex items-center space-x-2 px-6 py-2 rounded-lg font-medium transition-all duration-200
+                      ${isSubmittingApi
+                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700 text-white'
+                      }
+                    `}
+                  >
+                    {isSubmittingApi ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Salvando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>{editingApi ? 'Atualizar' : 'Salvar'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Voice Card Component
+interface VoiceCardProps {
+  voice: Voice;
+  onEdit: () => void;
+  onDelete: () => void;
+  onPlayPreview: () => void;
+  isPlaying: boolean;
+}
+
+const VoiceCard: React.FC<VoiceCardProps> = ({ voice, onEdit, onDelete, onPlayPreview, isPlaying }) => {
+  const getPlatformColor = (platform: string) => {
+    switch (platform) {
+      case 'ElevenLabs':
+        return {
+          bg: 'bg-purple-900/30',
+          text: 'text-purple-400',
+          border: 'border-purple-800'
+        };
+      case 'Fish-Audio':
+        return {
+          bg: 'bg-cyan-900/30',
+          text: 'text-cyan-400',
+          border: 'border-cyan-800'
+        };
+      default:
+        return {
+          bg: 'bg-blue-900/30',
+          text: 'text-blue-400',
+          border: 'border-blue-800'
+        };
+    }
+  };
+
+  const platformColors = getPlatformColor(voice.plataforma);
+
+  return (
+    <div className="bg-gray-800/50 rounded-xl border border-gray-700 hover:border-gray-600 transition-all duration-300 p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <div className="flex items-center space-x-3 mb-2">
+            <h3 className="font-medium text-white">{voice.nome_voz}</h3>
+            <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${platformColors.bg} ${platformColors.text} ${platformColors.border} border`}>
+              {voice.plataforma}
+            </div>
+          </div>
+          <p className="text-sm text-gray-400 mb-1">ID: {voice.voice_id}</p>
+          {voice.idioma && (
+            <p className="text-xs text-gray-500">Idioma: {voice.idioma}</p>
+          )}
+          {voice.genero && (
+            <p className="text-xs text-gray-500">Gênero: {voice.genero}</p>
+          )}
+        </div>
+        <div className="flex items-center space-x-2">
+          {voice.preview_url && (
+            <button
+              onClick={onPlayPreview}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                isPlaying
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+            >
+              {isPlaying ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            </button>
+          )}
+          <button
+            onClick={onEdit}
+            className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-all duration-200"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// API Card Component
+interface ApiCardProps {
+  api: API;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+const ApiCard: React.FC<ApiCardProps> = ({ api, onEdit, onDelete }) => {
+  const getPlatformColor = (platform: string) => {
+    switch (platform) {
+      case 'ElevenLabs':
+        return {
+          bg: 'bg-purple-900/30',
+          text: 'text-purple-400',
+          border: 'border-purple-800'
+        };
+      case 'Fish-Audio':
+        return {
+          bg: 'bg-cyan-900/30',
+          text: 'text-cyan-400',
+          border: 'border-cyan-800'
+        };
+      default:
+        return {
+          bg: 'bg-blue-900/30',
+          text: 'text-blue-400',
+          border: 'border-blue-800'
+        };
+    }
+  };
+
+  const platformColors = getPlatformColor(api.plataforma);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="bg-gray-800/50 rounded-xl border border-gray-700 hover:border-gray-600 transition-all duration-300 p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <div className="flex items-center space-x-3 mb-2">
+            <h3 className="font-medium text-white">{api.plataforma}</h3>
+            <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${platformColors.bg} ${platformColors.text} ${platformColors.border} border`}>
+              API Configurada
+            </div>
+          </div>
+          <p className="text-sm text-gray-400 mb-1">
+            Key: {api.api_key.substring(0, 8)}...
+          </p>
+          <p className="text-xs text-gray-500">
+            Criada em: {formatDate(api.created_at)}
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={onEdit}
+            className="p-2 text-gray-400 hover:text-green-400 hover:bg-green-900/20 rounded-lg transition-all duration-200"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-all duration-200"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SettingsPage;
