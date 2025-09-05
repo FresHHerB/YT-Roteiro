@@ -75,6 +75,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
   
   // Audio preview state
   const [playingAudio, setPlayingAudio] = useState<{ id: string; audio: HTMLAudioElement } | null>(null);
+  
+  // Filter state
+  const [voiceFilter, setVoiceFilter] = useState<string>('');
+  const [platformFilter, setPlatformFilter] = useState<string>('');
 
   useEffect(() => {
     loadVoices();
@@ -190,6 +194,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
       setMessage({ type: 'error', text: 'Erro ao reproduzir preview da voz' });
     }
   };
+
+  // Filter voices based on search and platform
+  const filteredVoices = voices.filter(voice => {
+    const matchesSearch = voice.nome_voz.toLowerCase().includes(voiceFilter.toLowerCase()) ||
+                         voice.voice_id.toLowerCase().includes(voiceFilter.toLowerCase());
+    const matchesPlatform = platformFilter === '' || voice.plataforma === platformFilter;
+    return matchesSearch && matchesPlatform;
+  });
+
+  // Get unique platforms for filter
+  const uniquePlatforms = [...new Set(voices.map(voice => voice.plataforma))];
 
   const loadVoices = async () => {
     setIsLoadingVoices(true);
@@ -562,19 +577,57 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
               </button>
             </div>
 
+            {/* Voice Filters */}
+            <div className="mb-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Search Filter */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Buscar Vozes
+                  </label>
+                  <input
+                    type="text"
+                    value={voiceFilter}
+                    onChange={(e) => setVoiceFilter(e.target.value)}
+                    placeholder="Nome da voz ou Voice ID..."
+                    className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
+                  />
+                </div>
+
+                {/* Platform Filter */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Filtrar por Plataforma
+                  </label>
+                  <select
+                    value={platformFilter}
+                    onChange={(e) => setPlatformFilter(e.target.value)}
+                    className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white"
+                  >
+                    <option value="">Todas as plataformas</option>
+                    {uniquePlatforms.map((platform) => (
+                      <option key={platform} value={platform}>
+                        {platform}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
             {/* Voices List */}
             <div className="space-y-4">
               {isLoadingVoices ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                 </div>
-              ) : voices.length === 0 ? (
+              ) : filteredVoices.length === 0 ? (
                 <div className="text-center py-8 text-gray-400">
                   <Mic className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhuma voz cadastrada</p>
+                  <p>{voices.length === 0 ? 'Nenhuma voz cadastrada' : 'Nenhuma voz encontrada com os filtros aplicados'}</p>
                 </div>
               ) : (
-                voices.map((voice) => (
+                filteredVoices.map((voice) => (
                   <VoiceCard
                     key={voice.id}
                     voice={voice}
@@ -915,13 +968,24 @@ const VoiceCard: React.FC<VoiceCardProps> = ({ voice, onEdit, onDelete, onPlayPr
     });
   };
 
+  const getPlatformColor = (platform: string) => {
+    switch (platform) {
+      case 'ElevenLabs':
+        return 'bg-purple-900/30 text-purple-400';
+      case 'Fish-Audio':
+        return 'bg-cyan-900/30 text-cyan-400';
+      default:
+        return 'bg-blue-900/30 text-blue-400';
+    }
+  };
+
   return (
     <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-4 hover:border-gray-600 transition-all duration-200">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <h4 className="font-medium text-white mb-1">{voice.nome_voz}</h4>
           <div className="flex items-center space-x-3 text-sm text-gray-400">
-            <span className="px-2 py-1 bg-blue-900/30 text-blue-400 rounded-full text-xs">
+            <span className={`px-2 py-1 rounded-full text-xs ${getPlatformColor(voice.plataforma)}`}>
               {voice.plataforma}
             </span>
             {voice.idioma && (
