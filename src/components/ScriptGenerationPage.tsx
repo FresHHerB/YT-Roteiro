@@ -308,36 +308,83 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         throw new Error('Voz não encontrada');
       }
 
-      // Get API key for the platform
-      const { data: apisData } = await supabase
-        .from('apis')
-        .select('*')
-        .eq('plataforma', voice.plataforma)
-        .single();
+      if (voice.plataforma === 'ElevenLabs') {
+        // Get API key for ElevenLabs
+        const { data: apisData } = await supabase
+          .from('apis')
+          .select('*')
+          .eq('plataforma', voice.plataforma)
+          .single();
 
-      if (!apisData) {
-        throw new Error(`API não configurada para ${voice.plataforma}`);
+        if (!apisData) {
+          throw new Error(`API key não encontrada para ${voice.plataforma}`);
+        }
+
+        // Buscar dados da voz para obter o preview_url
+        const response = await fetch(`https://api.elevenlabs.io/v1/voices/${voice.voice_id}`, {
+          method: 'GET',
+          headers: {
+            'xi-api-key': apisData.api_key
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro ElevenLabs: ${response.status} - ${errorText}`);
+        }
+
+        const voiceData = await response.json();
+        
+        // Verifica se há preview_url disponível
+        if (!voiceData.preview_url) {
+          throw new Error('Nenhum preview de áudio disponível para esta voz ElevenLabs');
+        }
+        
+        return voiceData.preview_url;
+
+      } else if (voice.plataforma === 'Fish-Audio') {
+        // Get API key for Fish-Audio
+        const { data: apisData } = await supabase
+          .from('apis')
+          .select('*')
+          .eq('plataforma', voice.plataforma)
+          .single();
+
+        if (!apisData) {
+          throw new Error(`API key não encontrada para ${voice.plataforma}`);
+        }
+
+        // Para Fish-Audio, buscamos os dados do modelo para obter o sample de áudio
+        const response = await fetch(`https://api.fish.audio/model/${voice.voice_id}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${apisData.api_key}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro Fish-Audio: ${response.status} - ${errorText}`);
+        }
+
+        const modelData = await response.json();
+        
+        // Verifica se há samples disponíveis
+        if (!modelData.samples || modelData.samples.length === 0) {
+          throw new Error('Nenhum sample de áudio disponível para esta voz Fish-Audio');
+        }
+        
+        // Usa o primeiro sample disponível
+        const sampleAudioUrl = modelData.samples[0].audio;
+        if (!sampleAudioUrl) {
+          throw new Error('URL de áudio do sample não encontrada');
+        }
+        
+        return sampleAudioUrl;
       }
 
-      // Generate test audio
-      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook/testarVoz', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          voice_id: voice.voice_id,
-          plataforma: voice.plataforma,
-          texto: 'Este é um teste da voz selecionada. Como você pode ouvir, esta é a qualidade e o tom da voz que será usada para gerar seus áudios.'
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao gerar áudio de teste');
-      }
-
-      const audioBlob = await response.blob();
-      return URL.createObjectURL(audioBlob);
+      throw new Error('Plataforma não suportada para teste');
     } catch (error) {
       throw error;
     }

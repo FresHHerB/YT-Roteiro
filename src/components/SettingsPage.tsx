@@ -343,30 +343,19 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
   // Generate voice test audio
   const generateVoiceTest = async (voice: Voice): Promise<string> => {
     try {
-      // Get API key for the platform
-      const apiData = apis.find(api => api.plataforma === voice.plataforma);
-      if (!apiData) {
-        throw new Error(`API key não encontrada para ${voice.plataforma}`);
-      }
-
-      const testText = "Olá! Este é um teste de voz para verificar a qualidade e o som desta voz artificial.";
-
       if (voice.plataforma === 'ElevenLabs') {
-        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice.voice_id}`, {
-          method: 'POST',
+        // Get API key for ElevenLabs
+        const apiData = apis.find(api => api.plataforma === voice.plataforma);
+        if (!apiData) {
+          throw new Error(`API key não encontrada para ${voice.plataforma}`);
+        }
+
+        // Buscar dados da voz para obter o preview_url
+        const response = await fetch(`https://api.elevenlabs.io/v1/voices/${voice.voice_id}`, {
+          method: 'GET',
           headers: {
-            'Accept': 'audio/mpeg',
-            'Content-Type': 'application/json',
             'xi-api-key': apiData.api_key
           },
-          body: JSON.stringify({
-            text: testText,
-            model_id: "eleven_multilingual_v2",
-            voice_settings: {
-              stability: 0.5,
-              similarity_boost: 0.5
-            }
-          })
         });
 
         if (!response.ok) {
@@ -374,10 +363,22 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
           throw new Error(`Erro ElevenLabs: ${response.status} - ${errorText}`);
         }
 
-        const audioBlob = await response.blob();
-        return URL.createObjectURL(audioBlob);
+        const voiceData = await response.json();
+        
+        // Verifica se há preview_url disponível
+        if (!voiceData.preview_url) {
+          throw new Error('Nenhum preview de áudio disponível para esta voz ElevenLabs');
+        }
+        
+        return voiceData.preview_url;
 
       } else if (voice.plataforma === 'Fish-Audio') {
+        // Get API key for Fish-Audio
+        const apiData = apis.find(api => api.plataforma === voice.plataforma);
+        if (!apiData) {
+          throw new Error(`API key não encontrada para ${voice.plataforma}`);
+        }
+
         // Para Fish-Audio, buscamos os dados do modelo para obter o sample de áudio
         const response = await fetch(`https://api.fish.audio/model/${voice.voice_id}`, {
           method: 'GET',
