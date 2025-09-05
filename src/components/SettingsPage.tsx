@@ -858,25 +858,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                   <button
                     type="submit"
                     disabled={isSubmittingVoice}
-                    className={`
-                      flex items-center space-x-2 px-6 py-2 rounded-lg font-medium transition-all duration-200
-                      ${isSubmittingVoice
-                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                      }
-                    `}
+                    className="flex items-center space-x-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200"
                   >
                     {isSubmittingVoice ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Salvando...</span>
-                      </>
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        <span>{editingVoice ? 'Atualizar' : 'Salvar'}</span>
-                      </>
+                      <Save className="w-4 h-4" />
                     )}
+                    <span>{editingVoice ? 'Atualizar' : 'Salvar'}</span>
                   </button>
                 </div>
               </form>
@@ -951,25 +940,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                   <button
                     type="submit"
                     disabled={isSubmittingApi}
-                    className={`
-                      flex items-center space-x-2 px-6 py-2 rounded-lg font-medium transition-all duration-200
-                      ${isSubmittingApi
-                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                        : 'bg-green-600 hover:bg-green-700 text-white'
-                      }
-                    `}
+                    className="flex items-center space-x-2 px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200"
                   >
                     {isSubmittingApi ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Salvando...</span>
-                      </>
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        <span>{editingApi ? 'Atualizar' : 'Salvar'}</span>
-                      </>
+                      <Save className="w-4 h-4" />
                     )}
+                    <span>{editingApi ? 'Atualizar' : 'Salvar'}</span>
                   </button>
                 </div>
               </form>
@@ -991,75 +969,64 @@ interface VoiceCardProps {
 }
 
 const VoiceCard: React.FC<VoiceCardProps> = ({ voice, onEdit, onDelete, onPlayPreview, isPlaying }) => {
-  const getPlatformColor = (platform: string) => {
-    switch (platform) {
-      case 'ElevenLabs':
-        return {
-          bg: 'bg-purple-900/30',
-          text: 'text-purple-400',
-          border: 'border-purple-800'
-        };
-      case 'Fish-Audio':
-        return {
-          bg: 'bg-cyan-900/30',
-          text: 'text-cyan-400',
-          border: 'border-cyan-800'
-        };
-      default:
-        return {
-          bg: 'bg-blue-900/30',
-          text: 'text-blue-400',
-          border: 'border-blue-800'
-        };
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
-  const platformColors = getPlatformColor(voice.plataforma);
-
   return (
-    <div className="bg-gray-800/50 rounded-xl border border-gray-700 hover:border-gray-600 transition-all duration-300 p-4">
+    <div className="bg-black/30 border border-gray-700 rounded-xl p-4 hover:border-gray-600 transition-all duration-200">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <div className="flex items-center space-x-3 mb-2">
-            <h3 className="font-medium text-white">{voice.nome_voz}</h3>
-            <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${platformColors.bg} ${platformColors.text} ${platformColors.border} border`}>
-              {voice.plataforma}
-            </div>
+          <h4 className="font-medium text-white mb-1">{voice.nome_voz}</h4>
+          <p className="text-sm text-gray-400 mb-2">ID: {voice.voice_id}</p>
+          <div className="flex items-center space-x-4 text-xs text-gray-500">
+            <span className="px-2 py-1 bg-gray-800 rounded-md">{voice.plataforma}</span>
+            {voice.idioma && <span>{voice.idioma}</span>}
+            {voice.genero && <span>{voice.genero}</span>}
           </div>
-          <p className="text-sm text-gray-400 mb-1">ID: {voice.voice_id}</p>
-          {voice.idioma && (
-            <p className="text-xs text-gray-500">Idioma: {voice.idioma}</p>
-          )}
-          {voice.genero && (
-            <p className="text-xs text-gray-500">Gênero: {voice.genero}</p>
-          )}
         </div>
         <div className="flex items-center space-x-2">
-          {voice.preview_url && (
+          {(voice.preview_url || voice.voice_id) && (
             <button
               onClick={onPlayPreview}
               className={`p-2 rounded-lg transition-all duration-200 ${
-                isPlaying
-                  ? 'bg-red-600 hover:bg-red-700 text-white'
-                  : 'bg-green-600 hover:bg-green-700 text-white'
+                isPlaying 
+                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
               }`}
+              title={isPlaying ? 'Parar preview' : 'Reproduzir preview'}
             >
-              {isPlaying ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+              {isPlaying ? (
+                <Square className="w-4 h-4" />
+              ) : (
+                <Play className="w-4 h-4" />
+              )}
             </button>
           )}
           <button
             onClick={onEdit}
-            className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+            className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded-lg transition-all duration-200"
+            title="Editar voz"
           >
             <Edit className="w-4 h-4" />
           </button>
           <button
             onClick={onDelete}
-            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-all duration-200"
+            className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-all duration-200"
+            title="Excluir voz"
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
+      </div>
+      <div className="text-xs text-gray-500">
+        Criado em {formatDate(voice.created_at)}
       </div>
     </div>
   );
@@ -1073,31 +1040,6 @@ interface ApiCardProps {
 }
 
 const ApiCard: React.FC<ApiCardProps> = ({ api, onEdit, onDelete }) => {
-  const getPlatformColor = (platform: string) => {
-    switch (platform) {
-      case 'ElevenLabs':
-        return {
-          bg: 'bg-purple-900/30',
-          text: 'text-purple-400',
-          border: 'border-purple-800'
-        };
-      case 'Fish-Audio':
-        return {
-          bg: 'bg-cyan-900/30',
-          text: 'text-cyan-400',
-          border: 'border-cyan-800'
-        };
-      default:
-        return {
-          bg: 'bg-blue-900/30',
-          text: 'text-blue-400',
-          border: 'border-blue-800'
-        };
-    }
-  };
-
-  const platformColors = getPlatformColor(api.plataforma);
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -1108,37 +1050,37 @@ const ApiCard: React.FC<ApiCardProps> = ({ api, onEdit, onDelete }) => {
     });
   };
 
+  const maskApiKey = (key: string) => {
+    if (key.length <= 8) return key;
+    return key.substring(0, 4) + '•'.repeat(key.length - 8) + key.substring(key.length - 4);
+  };
+
   return (
-    <div className="bg-gray-800/50 rounded-xl border border-gray-700 hover:border-gray-600 transition-all duration-300 p-4">
+    <div className="bg-black/30 border border-gray-700 rounded-xl p-4 hover:border-gray-600 transition-all duration-200">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <div className="flex items-center space-x-3 mb-2">
-            <h3 className="font-medium text-white">{api.plataforma}</h3>
-            <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${platformColors.bg} ${platformColors.text} ${platformColors.border} border`}>
-              API Configurada
-            </div>
-          </div>
-          <p className="text-sm text-gray-400 mb-1">
-            Key: {api.api_key.substring(0, 8)}...
-          </p>
-          <p className="text-xs text-gray-500">
-            Criada em: {formatDate(api.created_at)}
-          </p>
+          <h4 className="font-medium text-white mb-1">{api.plataforma}</h4>
+          <p className="text-sm text-gray-400 font-mono">{maskApiKey(api.api_key)}</p>
         </div>
         <div className="flex items-center space-x-2">
           <button
             onClick={onEdit}
-            className="p-2 text-gray-400 hover:text-green-400 hover:bg-green-900/20 rounded-lg transition-all duration-200"
+            className="p-2 text-gray-400 hover:text-green-400 hover:bg-gray-800 rounded-lg transition-all duration-200"
+            title="Editar API"
           >
             <Edit className="w-4 h-4" />
           </button>
           <button
             onClick={onDelete}
-            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-all duration-200"
+            className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-all duration-200"
+            title="Excluir API"
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
+      </div>
+      <div className="text-xs text-gray-500">
+        Criado em {formatDate(api.created_at)}
       </div>
     </div>
   );
