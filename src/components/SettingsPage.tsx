@@ -341,7 +341,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
         
         const requestBody = {
           text: testText,
-          reference_id: voiceId,
+          reference_id: voice.voice_id,
+          format: "mp3"
           format: "mp3",
           mp3_bitrate: 128,
           opus_bitrate: 128,
@@ -374,7 +375,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
           body: JSON.stringify(requestBody)
             format: "mp3"
        console.log('🐟 Fish-Audio Response Headers:', Object.fromEntries(response.headers.entries()));
-       console.log('🐟 Response OK:', response.ok);
 
         console.log('🐟 Fish-Audio Response Status:', response.status);
         console.log('🐟 Fish-Audio Response Headers:', Object.fromEntries(response.headers.entries()));
