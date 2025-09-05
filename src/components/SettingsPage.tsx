@@ -876,14 +876,14 @@ interface ApiCardProps {
 }
 
 const ApiCard: React.FC<ApiCardProps> = ({ api, onEdit, onDelete }) => {
-  const getPlatformColor = (platform: string) => {
-    const colors: { [key: string]: string } = {
-      'ElevenLabs': 'bg-orange-500',
-      'Fish-Audio': 'bg-blue-500',
-      'OpenAI': 'bg-green-500',
-      'Google': 'bg-red-500'
+  const getPlatformBadge = (platform: string) => {
+    const badges: { [key: string]: { bg: string; text: string } } = {
+      'ElevenLabs': { bg: 'bg-purple-600', text: 'text-white' },
+      'Fish-Audio': { bg: 'bg-cyan-600', text: 'text-white' },
+      'OpenAI': { bg: 'bg-green-600', text: 'text-white' },
+      'Google': { bg: 'bg-red-600', text: 'text-white' }
     };
-    return colors[platform] || 'bg-gray-500';
+    return badges[platform] || { bg: 'bg-gray-600', text: 'text-white' };
   };
 
   const formatDate = (dateString: string) => {
@@ -894,41 +894,48 @@ const ApiCard: React.FC<ApiCardProps> = ({ api, onEdit, onDelete }) => {
     });
   };
 
+  const platformBadge = getPlatformBadge(api.plataforma);
+
   return (
-    <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-4 hover:border-gray-600 transition-all duration-200">
+    <div className="bg-gray-800/80 rounded-xl border border-gray-700/50 p-4 hover:border-gray-600 transition-all duration-200">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${getPlatformColor(api.plataforma)}`}>
-            <Key className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h3 className="font-medium text-white">{api.plataforma}</h3>
-            <p className="text-xs text-gray-400">
-              Criado em {formatDate(api.created_at)}
-            </p>
+          {/* Status Indicator */}
+          <div className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0"></div>
+          
+          {/* API Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2 mb-1">
+              <h3 className="font-medium text-white truncate">{api.plataforma}</h3>
+              <span className={`px-2 py-1 rounded text-xs font-medium ${platformBadge.bg} ${platformBadge.text}`}>
+                {api.plataforma}
+              </span>
+            </div>
+            
+            {/* API Details */}
+            <div className="flex items-center space-x-3 text-xs text-gray-400">
+              <span className="font-mono">{api.api_key.substring(0, 20)}...</span>
+              <span>•</span>
+              <span>Criado em {formatDate(api.created_at)}</span>
+            </div>
           </div>
         </div>
         
-        <div className="flex items-center space-x-2">
+        {/* Action Buttons */}
+        <div className="flex items-center space-x-1 flex-shrink-0">
           <button
             onClick={onEdit}
-            className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-200"
           >
             <Edit3 className="w-4 h-4" />
           </button>
           <button
             onClick={onDelete}
-            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-all duration-200"
+            className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700/50 rounded-lg transition-all duration-200"
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
-      </div>
-      
-      <div className="mt-3 p-2 bg-black/50 rounded border border-gray-700">
-        <p className="text-xs text-gray-400 font-mono">
-          {api.api_key.substring(0, 20)}...
-        </p>
       </div>
     </div>
   );
