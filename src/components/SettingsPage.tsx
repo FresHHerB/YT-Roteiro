@@ -142,6 +142,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
       if (err.message?.includes('Timeout') || err.message?.includes('Failed to send')) {
         console.log('🔄 Tentando download direto como fallback...');
         try {
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const sanitizedVoiceName = voiceName.replace(/[^a-zA-Z0-9]/g, '_');
+          const fileName = `${sanitizedVoiceName}_${voiceId}_${timestamp}.mp3`;
           return await downloadDirectly(audioUrl, fileName, apiKey, platform);
         } catch (directError) {
           console.log('❌ Download direto também falhou:', directError);
@@ -565,6 +568,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
     }
   };
 
+  const addVoice = async () => {
     if (!voiceForm.voice_id.trim() || !voiceForm.nome_voz.trim()) {
       setVoiceSearchError('Voice ID e Nome da Voz são obrigatórios.');
       return;
@@ -740,6 +744,53 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
     'Fish-Audio': voices.filter(v => v.plataforma === 'Fish-Audio').length
   };
 
+  const playVoicePreview = async (voice: Voice) => {
+    const audioId = `voice-${voice.id}`;
+    
+    // Se já está tocando, para o áudio
+    if (isAudioPlaying(audioId)) {
+      pauseAudio();
+      return;
+    }
+
+    // Para qualquer áudio que esteja tocando
+    if (playingAudio) {
+      playingAudio.audio.pause();
+      playingAudio.audio.currentTime = 0;
+    }
+
+    try {
+      // Use bucket URL if available, otherwise get fresh preview URL
+      let previewUrl = voice.audio_file_path 
+        ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/audios/${voice.audio_file_path}`
+        : await getVoicePreviewUrl(voice);
+      
+      if (!previewUrl) {
+        setMessage({ type: 'error', text: 'Preview não disponível para esta voz' });
+        return;
+      }
+
+      // Cria e reproduz o áudio
+      const audio = new Audio(previewUrl);
+      
+      audio.addEventListener('ended', () => {
+        setPlayingAudio(null);
+      });
+
+      audio.addEventListener('error', () => {
+        setPlayingAudio(null);
+        setMessage({ type: 'error', text: 'Erro ao reproduzir áudio' });
+      });
+
+      await audio.play();
+      setPlayingAudio({ id: audioId, audio });
+      
+    } catch (error) {
+      console.error('Erro ao reproduzir preview:', error);
+      setMessage({ type: 'error', text: 'Erro ao reproduzir preview da voz' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
       {/* Header */}
@@ -883,6 +934,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                     key={voice.id}
                     voice={voice}
                     onDelete={() => deleteVoice(voice.id)}
+                    onPlay={() => playVoicePreview(voice)}
+                    isPlaying={isAudioPlaying(`voice-${voice.id}`)}
                   />
                 ))}
               </div>
@@ -1087,24 +1140,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                       Teste de Voz
                     </label>
                     <button
-                      onClick={playVoicePreview}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
-                        isAudioPlaying(`voice-0`)
-                          ? 'bg-red-600 hover:bg-red-700 text-white'
-                          : 'bg-green-600 hover:bg-green-700 text-white'
-                      }`}
+                      onClick={() => {
+                        const audio = new Audio(voiceForm.preview_url);
+                        audio.play();
+                      }}
+                      className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200"
                     >
-                      {isAudioPlaying(`voice-0`) ? (
-                        <>
-                          <Square className="w-4 h-4" />
-                          <span>Parar</span>
-                        </>
-                      ) : (
-                        <>
-                          <Volume2 className="w-4 h-4" />
-                          <span>Reproduzir Preview</span>
-                        </>
-                      )}
+                      <Volume2 className="w-4 h-4" />
+                      <span>Reproduzir Preview</span>
                     </button>
                   </div>
                 )}
@@ -1265,17 +1308,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
 interface VoiceCardProps {
   voice: Voice;
   onDelete: () => void;
+  onPlay: () => void;
+  isPlaying: boolean;
 }
 
-const VoiceCard: React.FC<VoiceCardProps> = ({ voice, onDelete }) => {
+const VoiceCard: React.FC<VoiceCardProps> = ({ voice, onDelete, onPlay, isPlaying }) => {
   const getPlatformColor = (platform: string) => {
     return platform === 'ElevenLabs' ? 'bg-purple-500' : 'bg-cyan-500';
   };
-
-  // Use bucket URL if available, otherwise use preview_url
-  const audioUrl = voice.audio_file_path 
-    ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/audios/${voice.audio_file_path}`
-    : voice.preview_url;
 
   return (
     <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-4 hover:border-gray-600 transition-all duration-200">
@@ -1297,13 +1337,11 @@ const VoiceCard: React.FC<VoiceCardProps> = ({ voice, onDelete }) => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          {voice && (
-            <VoicePreviewButton 
-              voice={voice} 
-              onPlay={() => playVoicePreview(voice)}
-              isPlaying={isAudioPlaying(`voice-${voice.id}`)}
-            />
-          )}
+          <VoicePreviewButton 
+            voice={voice} 
+            onPlay={onPlay}
+            isPlaying={isPlaying}
+          />
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -1327,7 +1365,6 @@ interface VoicePreviewButtonProps {
 }
 
 const VoicePreviewButton: React.FC<VoicePreviewButtonProps> = ({ voice, onPlay, isPlaying }) => {
-
   return (
     <button
       onClick={onPlay}
