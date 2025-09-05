@@ -270,20 +270,13 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
         return URL.createObjectURL(audioBlob);
 
       } else if (voice.plataforma === 'Fish-Audio') {
-        const response = await fetch('https://api.fish.audio/v1/tts', {
-          method: 'POST',
+        // Para Fish-Audio, buscamos os dados do modelo para obter o sample de áudio
+        const response = await fetch(`https://api.fish.audio/model/${voice.voice_id}`, {
+          method: 'GET',
           headers: {
             'Authorization': `Bearer ${apisData.api_key}`,
             'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            text: testText,
-            reference_id: voice.voice_id,
-            format: "mp3",
-            mp3_bitrate: 128,
-            opus_bitrate: 128,
-            latency: "normal"
-          })
+          }
         });
 
         if (!response.ok) {
@@ -291,8 +284,20 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
           throw new Error(`Erro Fish-Audio: ${response.status} - ${errorText}`);
         }
 
-        const audioBlob = await response.blob();
-        return URL.createObjectURL(audioBlob);
+        const modelData = await response.json();
+        
+        // Verifica se há samples disponíveis
+        if (!modelData.samples || modelData.samples.length === 0) {
+          throw new Error('Nenhum sample de áudio disponível para esta voz Fish-Audio');
+        }
+        
+        // Usa o primeiro sample disponível
+        const sampleAudioUrl = modelData.samples[0].audio;
+        if (!sampleAudioUrl) {
+          throw new Error('URL de áudio do sample não encontrada');
+        }
+        
+        return sampleAudioUrl;
       }
 
       throw new Error('Plataforma não suportada para teste');

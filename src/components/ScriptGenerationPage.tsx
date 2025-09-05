@@ -348,20 +348,13 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         return URL.createObjectURL(audioBlob);
 
       } else if (voice.plataforma === 'Fish-Audio') {
-        const response = await fetch('https://api.fish.audio/v1/tts', {
-          method: 'POST',
+        // Para Fish-Audio, buscamos os dados do modelo para obter o sample de áudio
+        const response = await fetch(`https://api.fish.audio/model/${voice.voice_id}`, {
+          method: 'GET',
           headers: {
             'Authorization': `Bearer ${apisData.api_key}`,
             'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            text: testText,
-            reference_id: voice.voice_id,
-            format: "mp3",
-            mp3_bitrate: 128,
-            opus_bitrate: 128,
-            latency: "normal"
-          })
+          }
         });
 
         if (!response.ok) {
@@ -371,18 +364,6 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
 
         const audioBlob = await response.blob();
         return URL.createObjectURL(audioBlob);
-      }
-
-      throw new Error('Plataforma não suportada para teste');
-    } catch (error) {
-      console.error('Erro ao gerar teste de voz:', error);
-      throw error;
-    }
-  };
-
-  const playSelectedVoicePreview = () => {
-    if (!selectedVoiceId) return;
-
     const audioId = `voice-preview-${selectedVoiceId}`;
     
     if (isAudioPlaying(audioId)) {
