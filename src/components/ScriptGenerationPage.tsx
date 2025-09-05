@@ -711,128 +711,140 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                 ) : (
                   <>
                     <Wand2 className="w-6 h-6" />
-                    <span>Gerar Roteiro e Áudio</span>
+                    <span>Gerar Roteiro</span>
                   </>
                 )}
               </button>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Generated Script Display */}
-      {generatedScript && (
-        <div className="max-w-4xl mx-auto px-6 pb-12">
-          <div className="bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800 p-8">
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-light text-white">Roteiro Gerado</h2>
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2 px-3 py-1 bg-green-900/30 text-green-400 border border-green-800 rounded-full text-sm">
-                    <CheckCircle className="w-4 h-4" />
-                    <span>{scriptCharCount.toLocaleString()} caracteres</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => navigator.clipboard.writeText(editedScript)}
-                      className="flex items-center space-x-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all duration-200"
-                    >
-                      <Copy className="w-4 h-4" />
-                      <span>Copiar</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        const blob = new Blob([editedScript], { type: 'text/plain' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `roteiro-${selectedChannel?.nome_canal || 'script'}-${new Date().toISOString().split('T')[0]}.txt`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                      }}
-                      className="flex items-center space-x-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all duration-200"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Download</span>
-                    </button>
+          {/* Script Field - Always visible after channel selection */}
+          {selectedChannel && (
+            <div className="bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800 p-8">
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-light text-white">Roteiro</h2>
+                  <div className="flex items-center space-x-4">
+                    {editedScript && (
+                      <div className="flex items-center space-x-2 px-3 py-1 bg-green-900/30 text-green-400 border border-green-800 rounded-full text-sm">
+                        <CheckCircle className="w-4 h-4" />
+                        <span>{editedScript.length.toLocaleString()} caracteres</span>
+                      </div>
+                    )}
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => navigator.clipboard.writeText(editedScript)}
+                        disabled={!editedScript}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                          editedScript 
+                            ? 'bg-gray-800 hover:bg-gray-700 text-white' 
+                            : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <Copy className="w-4 h-4" />
+                        <span>Copiar</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (editedScript) {
+                            const blob = new Blob([editedScript], { type: 'text/plain' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `roteiro-${selectedChannel?.nome_canal || 'script'}-${new Date().toISOString().split('T')[0]}.txt`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                          }
+                        }}
+                        disabled={!editedScript}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                          editedScript 
+                            ? 'bg-gray-800 hover:bg-gray-700 text-white' 
+                            : 'bg-gray-800/50 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Download</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <p className="text-gray-400 text-sm">Canal: {selectedChannel?.nome_canal}</p>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="bg-black/50 rounded-xl border border-gray-700 p-6 h-80 overflow-y-auto">
-                <textarea
-                  value={editedScript}
-                  onChange={(e) => setEditedScript(e.target.value)}
-                  className="w-full h-full bg-transparent border-none outline-none resize-none text-gray-300 leading-relaxed placeholder:text-gray-500"
-                  placeholder="Roteiro gerado aparecerá aqui..."
-                />
+                <p className="text-gray-400 text-sm">Canal: {selectedChannel?.nome_canal}</p>
               </div>
               
-              {/* Audio Generation Section */}
-              <div className="flex flex-col items-center space-y-4">
-                {/* Audio Message */}
-                {audioMessage && (
-                  <div className={`p-3 rounded-xl text-center border text-sm ${
-                    audioMessage.type === 'success' 
-                      ? 'bg-green-900/20 text-green-400 border-green-800' 
-                      : 'bg-red-900/20 text-red-400 border-red-800'
-                  }`}>
-                    <span className="font-medium">{audioMessage.text}</span>
-                  </div>
-                )}
+              <div className="space-y-4">
+                <div className="bg-black/50 rounded-xl border border-gray-700 p-6 h-80 overflow-y-auto">
+                  <textarea
+                    value={editedScript}
+                    onChange={(e) => setEditedScript(e.target.value)}
+                    className="w-full h-full bg-transparent border-none outline-none resize-none text-gray-300 leading-relaxed placeholder:text-gray-500"
+                    placeholder="Cole seu roteiro aqui ou gere um novo usando o formulário acima..."
+                  />
+                </div>
                 
-                {/* Voice Info */}
-                {selectedChannel?.voz_prefereida && (
-                  <div className="flex items-center space-x-3 text-sm text-gray-400">
-                    <Mic className="w-4 h-4" />
-                    <span>
-                      Voz: {voices.find(v => v.id === selectedChannel.voz_prefereida)?.nome_voz || 'Não encontrada'} 
-                      ({voices.find(v => v.id === selectedChannel.voz_prefereida)?.plataforma || 'N/A'})
-                    </span>
-                  </div>
-                )}
-                
-                {/* Generate Audio Button */}
-                <button
-                  onClick={generateAudio}
-                  disabled={!editedScript.trim() || isGeneratingAudio || !selectedChannel?.voz_prefereida}
-                  className={`
-                    flex items-center space-x-3 px-8 py-3 rounded-xl font-medium transition-all duration-300 transform
-                    ${!editedScript.trim() || isGeneratingAudio || !selectedChannel?.voz_prefereida
-                      ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
-                      : 'bg-green-600 hover:bg-green-700 text-white hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
-                    }
-                  `}
-                >
-                  {isGeneratingAudio ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Gerando Áudio...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="w-5 h-5" />
-                      <span>Gerar Áudio</span>
-                    </>
+                {/* Audio Generation Section */}
+                <div className="flex flex-col items-center space-y-4">
+                  {/* Audio Message */}
+                  {audioMessage && (
+                    <div className={`p-3 rounded-xl text-center border text-sm ${
+                      audioMessage.type === 'success' 
+                        ? 'bg-green-900/20 text-green-400 border-green-800' 
+                        : 'bg-red-900/20 text-red-400 border-red-800'
+                    }`}>
+                      <span className="font-medium">{audioMessage.text}</span>
+                    </div>
                   )}
-                </button>
-                
-                {/* Voice Configuration Warning */}
-                {!selectedChannel?.voz_prefereida && (
-                  <p className="text-yellow-400 text-sm text-center">
-                    Configure uma voz preferida nas configurações do canal para gerar áudio
-                  </p>
-                )}
+                  
+                  {/* Voice Info */}
+                  {selectedChannel?.voz_prefereida && (
+                    <div className="flex items-center space-x-3 text-sm text-gray-400">
+                      <Mic className="w-4 h-4" />
+                      <span>
+                        Voz: {voices.find(v => v.id === selectedChannel.voz_prefereida)?.nome_voz || 'Não encontrada'} 
+                        ({voices.find(v => v.id === selectedChannel.voz_prefereida)?.plataforma || 'N/A'})
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Generate Audio Button */}
+                  <button
+                    onClick={generateAudio}
+                    disabled={!editedScript.trim() || isGeneratingAudio || !selectedChannel?.voz_prefereida}
+                    className={`
+                      flex items-center space-x-3 px-8 py-3 rounded-xl font-medium transition-all duration-300 transform
+                      ${!editedScript.trim() || isGeneratingAudio || !selectedChannel?.voz_prefereida
+                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
+                        : 'bg-green-600 hover:bg-green-700 text-white hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
+                      }
+                    `}
+                  >
+                    {isGeneratingAudio ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Gerando Áudio...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-5 h-5" />
+                        <span>Gerar Áudio</span>
+                      </>
+                    )}
+                  </button>
+                  
+                  {/* Voice Configuration Warning */}
+                  {!selectedChannel?.voz_prefereida && (
+                    <p className="text-yellow-400 text-sm text-center">
+                      Configure uma voz preferida nas configurações do canal para gerar áudio
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Settings Modal */}
       {showSettingsModal && selectedChannel && (
