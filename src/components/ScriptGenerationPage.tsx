@@ -316,59 +316,29 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         .single();
 
       if (!apisData) {
-        throw new Error(`API key não encontrada para ${voice.plataforma}`);
+        throw new Error(`API não configurada para ${voice.plataforma}`);
       }
 
-      const testText = "Olá! Este é um teste de voz para verificar a qualidade e o som desta voz artificial.";
+      // Generate test audio
+      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook/testarVoz', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          voice_id: voice.voice_id,
+          plataforma: voice.plataforma,
+          texto: 'Este é um teste da voz selecionada. Como você pode ouvir, esta é a qualidade e o tom da voz que será usada para gerar seus áudios.'
+        }),
+      });
 
-      if (voice.plataforma === 'ElevenLabs') {
-        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice.voice_id}`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'audio/mpeg',
-            'Content-Type': 'application/json',
-            'xi-api-key': apisData.api_key
-          },
-          body: JSON.stringify({
-            text: testText,
-            model_id: "eleven_multilingual_v2",
-            voice_settings: {
-              stability: 0.5,
-              similarity_boost: 0.5
-            }
-          })
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Erro ElevenLabs: ${response.status} - ${errorText}`);
-        }
-
-        const audioBlob = await response.blob();
-        return URL.createObjectURL(audioBlob);
-
-      } else if (voice.plataforma === 'Fish-Audio') {
-        // Para Fish-Audio, buscamos os dados do modelo para obter o sample de áudio
-        const response = await fetch(`https://api.fish.audio/model/${voice.voice_id}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${apisData.api_key}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Erro Fish-Audio: ${response.status} - ${errorText}`);
-        }
-
-        const audioBlob = await response.blob();
-        return URL.createObjectURL(audioBlob);
-      } else {
-        throw new Error(`Plataforma ${voice.plataforma} não suportada`);
+      if (!response.ok) {
+        throw new Error('Erro ao gerar áudio de teste');
       }
+
+      const audioBlob = await response.blob();
+      return URL.createObjectURL(audioBlob);
     } catch (error) {
-      console.error('Erro ao gerar teste de voz:', error);
       throw error;
     }
   };
