@@ -367,15 +367,17 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
 
         console.log('🐟 Enviando requisição...');
         
+        console.log('🐟 Fish-Audio: Fazendo requisição TTS...');
         const response = await fetch('https://api.fish.audio/v1/tts', {
           method: 'POST',
           headers: requestHeaders,
           body: JSON.stringify(requestBody)
-        });
-
-       console.log('🐟 Fish-Audio Response Status:', response.status);
+            format: "mp3"
        console.log('🐟 Fish-Audio Response Headers:', Object.fromEntries(response.headers.entries()));
        console.log('🐟 Response OK:', response.ok);
+
+        console.log('🐟 Fish-Audio Response Status:', response.status);
+        console.log('🐟 Fish-Audio Response Headers:', Object.fromEntries(response.headers.entries()));
 
         if (!response.ok) {
          console.log('🐟 ❌ Fish-Audio Error Response Status:', response.status);
@@ -397,13 +399,37 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
            const errorData = JSON.parse(responseText);
             errorMessage += ` - ${errorData.error?.message || errorData.message || 'Erro desconhecido'}`;
           } catch {
-           errorMessage += ` - ${responseText || 'Erro desconhecido'}`;
+          let errorMessage = `Status ${response.status}`;
+          try {
+            const errorText = await response.text();
+            console.error('🐟 Fish-Audio Error Response:', errorText);
+            
+            // Tentar parsear JSON do erro
+            try {
+              const errorJson = JSON.parse(errorText);
+              errorMessage = errorJson.message || errorJson.error || errorText;
+            } catch {
+              errorMessage = errorText || errorMessage;
+            }
+          } catch (e) {
+            console.error('🐟 Erro ao ler resposta de erro:', e);
           }
-          throw new Error(errorMessage);
+          throw new Error(`Erro Fish-Audio: ${errorMessage}`);
         }
 
+        console.log('🐟 Fish-Audio: Convertendo resposta para blob...');
        console.log('🐟 ✅ Fish-Audio Success Response - convertendo para blob...');
         const audioBlob = await response.blob();
+        console.log('🐟 Fish-Audio Blob Info:', {
+          size: audioBlob.size,
+          type: audioBlob.type
+        });
+        
+        if (audioBlob.size === 0) {
+          throw new Error('Fish-Audio retornou áudio vazio');
+        }
+
+        console.log('🐟 Fish-Audio: Criando URL do áudio...');
        console.log('🐟 ✅ Fish-Audio Audio Blob:', {
          size: audioBlob.size,
          type: audioBlob.type
