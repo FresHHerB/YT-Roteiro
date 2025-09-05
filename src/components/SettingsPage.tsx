@@ -342,7 +342,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
         const requestBody = {
           text: testText,
           reference_id: voice.voice_id,
-          format: "mp3"
           format: "mp3",
           mp3_bitrate: 128,
           opus_bitrate: 128,
