@@ -54,6 +54,10 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
   const [modalMessage, setModalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [playingAudio, setPlayingAudio] = useState<{ id: string; audio: HTMLAudioElement } | null>(null);
 
+  // Voice test state
+  const [isTestingVoice, setIsTestingVoice] = useState(false);
+  const [voiceTestError, setVoiceTestError] = useState<string>('');
+
   useEffect(() => {
     loadChannels();
     loadVoices();
@@ -217,7 +221,118 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
     return voice?.preview_url || null;
   };
 
+  // Generate voice test audio
+  const generateVoiceTest = async (voiceId: number): Promise<string | null> => {
+    try {
+      // Get voice data
+      const voice = voices.find(v => v.id === voiceId);
+      if (!voice) {
+        throw new Error('Voz não encontrada');
+      }
+
+      // Get API key for the platform
+      const { data: apisData } = await supabase
+        .from('apis')
+        .select('*')
+        .eq('plataforma', voice.plataforma)
+        .single();
+
+      if (!apisData) {
+        throw new Error(`API key não encontrada para ${voice.plataforma}`);
+      }
+
+      const testText = "Olá! Este é um teste de voz para verificar a qualidade e o som desta voz artificial.";
+
+      if (voice.plataforma === 'ElevenLabs') {
+        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice.voice_id}`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'audio/mpeg',
+            'Content-Type': 'application/json',
+            'xi-api-key': apisData.api_key
+          },
+          body: JSON.stringify({
+            text: testText,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.5
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro ElevenLabs: ${response.status} - ${errorText}`);
+        }
+
+        const audioBlob = await response.blob();
+        return URL.createObjectURL(audioBlob);
+
+      } else if (voice.plataforma === 'Fish-Audio') {
+        const response = await fetch('https://api.fish.audio/v1/tts', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apisData.api_key}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            text: testText,
+            reference_id: voice.voice_id,
+            format: "mp3",
+            mp3_bitrate: 128,
+            opus_bitrate: 128,
+            latency: "normal"
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro Fish-Audio: ${response.status} - ${errorText}`);
+        }
+
+        const audioBlob = await response.blob();
+        return URL.createObjectURL(audioBlob);
+      }
+
+      throw new Error('Plataforma não suportada para teste');
+    } catch (error) {
+      console.error('Erro ao gerar teste de voz:', error);
+      throw error;
+    }
+  };
+
   const playSelectedVoicePreview = () => {
+    if (!selectedVoiceId) return;
+
+    const audioId = `voice-preview-${selectedVoiceId}`;
+    
+    if (isAudioPlaying(audioId)) {
+      pauseAudio();
+      return;
+    }
+
+    setIsTestingVoice(true);
+    setVoiceTestError('');
+
+    generateVoiceTest(selectedVoiceId)
+      .then(audioUrl => {
+        if (audioUrl) {
+          playAudio(audioUrl, audioId);
+        } else {
+          setVoiceTestError('Não foi possível gerar o áudio de teste');
+        }
+      })
+      .catch(error => {
+        console.error('Erro no teste de voz:', error);
+        setVoiceTestError(error instanceof Error ? error.message : 'Erro ao testar voz');
+      })
+      .finally(() => {
+        setIsTestingVoice(false);
+      });
+  };
+
+  const playSelectedVoicePreviewOld = () => {
     const previewUrl = getSelectedVoicePreviewUrl();
     if (previewUrl && selectedVoiceId) {
       const audioId = `voice-preview-${selectedVoiceId}`;
@@ -441,17 +556,30 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
                   </div>
                   
                   {/* Voice Preview Button */}
-                  {selectedVoiceId && getSelectedVoicePreviewUrl() && (
+                  {selectedVoiceId && (
                     <div className="mt-2">
+                      {voiceTestError && (
+                        <p className="text-xs text-red-400 mb-2">
+                          {voiceTestError}
+                        </p>
+                      )}
                       <button
                         onClick={playSelectedVoicePreview}
+                        disabled={isTestingVoice}
                         className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
-                          isAudioPlaying(`voice-preview-${selectedVoiceId}`)
+                          isTestingVoice
+                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                            : isAudioPlaying(`voice-preview-${selectedVoiceId}`)
                             ? 'bg-red-600 hover:bg-red-700 text-white'
                             : 'bg-green-600 hover:bg-green-700 text-white'
                         }`}
                       >
-                        {isAudioPlaying(`voice-preview-${selectedVoiceId}`) ? (
+                        {isTestingVoice ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Carregando...</span>
+                          </>
+                        ) : isAudioPlaying(`voice-preview-${selectedVoiceId}`) ? (
                           <>
                             <Square className="w-4 h-4" />
                             <span>Parar</span>
