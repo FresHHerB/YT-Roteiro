@@ -855,3 +855,4 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                   >
                     Cancelar
                   </button>
+                </div>
