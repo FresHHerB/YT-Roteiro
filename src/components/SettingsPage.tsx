@@ -565,23 +565,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
     }
   };
 
-  const playVoicePreview = () => {
-    if (voiceForm.voice_id && voiceForm.nome_voz) {
-      const tempVoice: Voice = {
-        id: 0, // Temporary ID for preview
-        voice_id: voiceForm.voice_id,
-        nome_voz: voiceForm.nome_voz,
-        plataforma: voiceForm.plataforma,
-        idioma: voiceForm.idioma,
-        genero: voiceForm.genero,
-        preview_url: voiceForm.preview_url,
-        created_at: new Date().toISOString()
-      };
-      playVoicePreview(tempVoice);
-    }
-  };
-
-  const addVoice = async () => {
     if (!voiceForm.voice_id.trim() || !voiceForm.nome_voz.trim()) {
       setVoiceSearchError('Voice ID e Nome da Voz são obrigatórios.');
       return;
