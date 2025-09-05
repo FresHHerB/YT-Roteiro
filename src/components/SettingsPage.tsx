@@ -952,39 +952,64 @@ const VoiceCard: React.FC<VoiceCardProps> = ({
   isPlaying, 
   isTestingVoice 
 }) => {
-  const getPlatformColor = (platform: string) => {
-    const colors: { [key: string]: string } = {
-      'ElevenLabs': 'bg-orange-500',
-      'Fish-Audio': 'bg-blue-500',
-      'OpenAI': 'bg-green-500',
-      'Google': 'bg-red-500'
+  const getPlatformBadge = (platform: string) => {
+    const badges: { [key: string]: { bg: string; text: string } } = {
+      'ElevenLabs': { bg: 'bg-purple-600', text: 'text-white' },
+      'Fish-Audio': { bg: 'bg-cyan-600', text: 'text-white' },
+      'OpenAI': { bg: 'bg-green-600', text: 'text-white' },
+      'Google': { bg: 'bg-red-600', text: 'text-white' }
     };
-    return colors[platform] || 'bg-gray-500';
+    return badges[platform] || { bg: 'bg-gray-600', text: 'text-white' };
   };
 
+  const platformBadge = getPlatformBadge(voice.plataforma);
+
   return (
-    <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-4 hover:border-gray-600 transition-all duration-200">
-      <div className="flex items-start justify-between mb-3">
+    <div className="bg-gray-800/80 rounded-xl border border-gray-700/50 p-4 hover:border-gray-600 transition-all duration-200">
+      <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${getPlatformColor(voice.plataforma)}`}>
-            <Mic className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h3 className="font-medium text-white">{voice.nome_voz}</h3>
-            <p className="text-xs text-gray-400">{voice.plataforma}</p>
+          {/* Status Indicator */}
+          <div className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0"></div>
+          
+          {/* Voice Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2 mb-1">
+              <h3 className="font-medium text-white truncate">{voice.nome_voz}</h3>
+              <span className={`px-2 py-1 rounded text-xs font-medium ${platformBadge.bg} ${platformBadge.text}`}>
+                {voice.plataforma}
+              </span>
+            </div>
+            
+            {/* Voice Details */}
+            <div className="flex items-center space-x-3 text-xs text-gray-400">
+              <span className="font-mono">{voice.voice_id}</span>
+              {voice.idioma && (
+                <>
+                  <span>•</span>
+                  <span>{voice.idioma}</span>
+                </>
+              )}
+              {voice.genero && (
+                <>
+                  <span>•</span>
+                  <span>{voice.genero}</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
         
-        <div className="flex items-center space-x-2">
+        {/* Action Buttons */}
+        <div className="flex items-center space-x-1 flex-shrink-0">
           <button
             onClick={onTest}
             disabled={isTestingVoice}
-            className={`p-2 rounded-lg transition-all duration-200 ${
+            className={`p-2 rounded-lg transition-all duration-200 hover:bg-gray-700/50 ${
               isTestingVoice
                 ? 'text-gray-400 cursor-not-allowed'
                 : isPlaying
-                ? 'text-red-400 hover:bg-red-900/20'
-                : 'text-green-400 hover:bg-green-900/20'
+                ? 'text-red-400'
+                : 'text-gray-300 hover:text-white'
             }`}
           >
             {isTestingVoice ? (
@@ -997,36 +1022,16 @@ const VoiceCard: React.FC<VoiceCardProps> = ({
           </button>
           <button
             onClick={onEdit}
-            className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-200"
           >
             <Edit3 className="w-4 h-4" />
           </button>
           <button
             onClick={onDelete}
-            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-all duration-200"
+            className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700/50 rounded-lg transition-all duration-200"
           >
             <Trash2 className="w-4 h-4" />
           </button>
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        {voice.idioma && (
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-gray-500">Idioma:</span>
-            <span className="text-xs text-gray-300">{voice.idioma}</span>
-          </div>
-        )}
-        {voice.genero && (
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-gray-500">Gênero:</span>
-            <span className="text-xs text-gray-300">{voice.genero}</span>
-          </div>
-        )}
-        <div className="p-2 bg-black/50 rounded border border-gray-700">
-          <p className="text-xs text-gray-400 font-mono">
-            ID: {voice.voice_id}
-          </p>
         </div>
       </div>
     </div>
