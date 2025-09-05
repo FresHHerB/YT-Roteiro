@@ -851,4 +851,4 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                   <button
                     type="button"
                     onClick={resetVoiceForm}
-                    className="px-6 py-2 text-gray-400 hover:text
+                    className="px-6 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
