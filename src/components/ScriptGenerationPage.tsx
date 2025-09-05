@@ -61,6 +61,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   const [editedScript, setEditedScript] = useState<string>('');
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [audioMessage, setAudioMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [selectedVoiceForAudio, setSelectedVoiceForAudio] = useState<number | null>(null);
   
   // Settings modal state
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -173,6 +174,8 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
     const channel = channels.find(c => c.id === channelId);
     setSelectedChannelId(channelId);
     setSelectedChannel(channel || null);
+    // Set default voice for audio generation
+    setSelectedVoiceForAudio(channel?.voz_prefereida || null);
     setMessage(null);
   };
 
@@ -298,13 +301,13 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   };
 
   const generateAudio = async () => {
-    if (!selectedChannel || !editedScript.trim()) {
+    if (!editedScript.trim()) {
       setAudioMessage({ type: 'error', text: 'Roteiro não disponível para gerar áudio.' });
       return;
     }
 
-    if (!selectedChannel.voz_prefereida) {
-      setAudioMessage({ type: 'error', text: 'Nenhuma voz preferida configurada para este canal.' });
+    if (!selectedVoiceForAudio) {
+      setAudioMessage({ type: 'error', text: 'Selecione uma voz para gerar o áudio.' });
       return;
     }
 
@@ -313,7 +316,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
 
     try {
       // Get voice data
-      const voice = voices.find(v => v.id === selectedChannel.voz_prefereida);
+      const voice = voices.find(v => v.id === selectedVoiceForAudio);
       if (!voice) {
         throw new Error('Voz preferida não encontrada');
       }
@@ -444,6 +447,36 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
     } catch (error) {
       throw error;
     }
+  };
+
+  const testSelectedVoice = () => {
+    if (!selectedVoiceForAudio) return;
+    
+    const audioId = `voice-test-${selectedVoiceForAudio}`;
+    
+    if (isAudioPlaying(audioId)) {
+      pauseAudio();
+      return;
+    }
+
+    setTestingVoices(prev => new Set(prev).add(selectedVoiceForAudio));
+    setVoiceTestError('');
+
+    generateVoiceTest(selectedVoiceForAudio)
+      .then(audioUrl => {
+        playAudio(audioUrl, audioId);
+      })
+      .catch(error => {
+        console.error('Erro no teste de voz:', error);
+        setAudioMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao testar voz' });
+      })
+      .finally(() => {
+        setTestingVoices(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(selectedVoiceForAudio);
+          return newSet;
+        });
+      });
   };
 
   const playSelectedVoicePreview = () => {
@@ -784,6 +817,81 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                   />
                 </div>
                 
+                {/* Voice Selector */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-300">
+                      Voz para Áudio
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    {/* Voice Selector */}
+                    <div className="flex-1">
+                      {isLoadingVoices ? (
+                        <div className="flex items-center space-x-2 p-3 bg-gray-800 border border-gray-600 rounded-lg">
+                          <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                          <span className="text-gray-400 text-sm">Carregando vozes...</span>
+                        </div>
+                      ) : (
+                        <select
+                          value={selectedVoiceForAudio || ''}
+                          onChange={(e) => setSelectedVoiceForAudio(e.target.value ? parseInt(e.target.value) : null)}
+                          className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all duration-200 text-white"
+                        >
+                          <option value="">Selecione uma voz</option>
+                          {voices.map((voice) => (
+                            <option key={voice.id} value={voice.id}>
+                              {voice.nome_voz} - {voice.plataforma}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                    
+                    {/* Voice Test Button */}
+                    <button
+                      onClick={testSelectedVoice}
+                      disabled={!selectedVoiceForAudio || (selectedVoiceForAudio ? testingVoices.has(selectedVoiceForAudio) : false)}
+                      className={`flex items-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        !selectedVoiceForAudio || (selectedVoiceForAudio ? testingVoices.has(selectedVoiceForAudio) : false)
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          : isAudioPlaying(`voice-test-${selectedVoiceForAudio}`)
+                          ? 'bg-red-600 hover:bg-red-700 text-white'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      }`}
+                    >
+                      {selectedVoiceForAudio && testingVoices.has(selectedVoiceForAudio) ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Carregando...</span>
+                        </>
+                      ) : isAudioPlaying(`voice-test-${selectedVoiceForAudio}`) ? (
+                        <>
+                          <Square className="w-4 h-4" />
+                          <span>Parar</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4" />
+                          <span>Testar</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  
+                  {/* Selected Voice Info */}
+                  {selectedVoiceForAudio && (
+                    <div className="flex items-center space-x-3 text-sm text-gray-400">
+                      <Mic className="w-4 h-4" />
+                      <span>
+                        Voz selecionada: {voices.find(v => v.id === selectedVoiceForAudio)?.nome_voz || 'Não encontrada'} 
+                        ({voices.find(v => v.id === selectedVoiceForAudio)?.plataforma || 'N/A'})
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
                 {/* Audio Generation Section */}
                 <div className="flex flex-col items-center space-y-4">
                   {/* Audio Message */}
@@ -797,24 +905,13 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                     </div>
                   )}
                   
-                  {/* Voice Info */}
-                  {selectedChannel?.voz_prefereida && (
-                    <div className="flex items-center space-x-3 text-sm text-gray-400">
-                      <Mic className="w-4 h-4" />
-                      <span>
-                        Voz: {voices.find(v => v.id === selectedChannel.voz_prefereida)?.nome_voz || 'Não encontrada'} 
-                        ({voices.find(v => v.id === selectedChannel.voz_prefereida)?.plataforma || 'N/A'})
-                      </span>
-                    </div>
-                  )}
-                  
                   {/* Generate Audio Button */}
                   <button
                     onClick={generateAudio}
-                    disabled={!editedScript.trim() || isGeneratingAudio || !selectedChannel?.voz_prefereida}
+                    disabled={!editedScript.trim() || isGeneratingAudio || !selectedVoiceForAudio}
                     className={`
                       flex items-center space-x-3 px-8 py-3 rounded-xl font-medium transition-all duration-300 transform
-                      ${!editedScript.trim() || isGeneratingAudio || !selectedChannel?.voz_prefereida
+                      ${!editedScript.trim() || isGeneratingAudio || !selectedVoiceForAudio
                         ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
                         : 'bg-green-600 hover:bg-green-700 text-white hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
                       }
@@ -833,10 +930,10 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                     )}
                   </button>
                   
-                  {/* Voice Configuration Warning */}
-                  {!selectedChannel?.voz_prefereida && (
+                  {/* Voice Selection Warning */}
+                  {!selectedVoiceForAudio && (
                     <p className="text-yellow-400 text-sm text-center">
-                      Configure uma voz preferida nas configurações do canal para gerar áudio
+                      Selecione uma voz para gerar o áudio
                     </p>
                   )}
                 </div>
