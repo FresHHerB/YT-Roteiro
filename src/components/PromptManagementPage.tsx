@@ -222,7 +222,7 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
   };
 
   // Generate voice test audio
-  const generateVoiceTest = async (voiceId: number): Promise<string | null> => {
+  const generateVoiceTest = async (voiceId: number): Promise<string> => {
     try {
       // Get voice data
       const voice = voices.find(v => v.id === voiceId);
@@ -317,11 +317,7 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
 
     generateVoiceTest(selectedVoiceId)
       .then(audioUrl => {
-        if (audioUrl) {
-          playAudio(audioUrl, audioId);
-        } else {
-          setVoiceTestError('Não foi possível gerar o áudio de teste');
-        }
+        playAudio(audioUrl, audioId);
       })
       .catch(error => {
         console.error('Erro no teste de voz:', error);
@@ -333,6 +329,7 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
   };
 
   const playSelectedVoicePreviewOld = () => {
+    // Fallback method using preview_url if available
     const previewUrl = getSelectedVoicePreviewUrl();
     if (previewUrl && selectedVoiceId) {
       const audioId = `voice-preview-${selectedVoiceId}`;
@@ -341,6 +338,9 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
       } else {
         playAudio(previewUrl, audioId);
       }
+    } else if (selectedVoiceId) {
+      // If no preview URL, generate audio in real-time
+      playSelectedVoicePreview();
     }
   };
 

@@ -341,7 +341,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
   };
 
   // Generate voice test audio
-  const generateVoiceTest = async (voice: Voice): Promise<string | null> => {
+  const generateVoiceTest = async (voice: Voice): Promise<string> => {
     try {
       // Get API key for the platform
       const apiData = apis.find(api => api.plataforma === voice.plataforma);
@@ -423,11 +423,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
 
     generateVoiceTest(voice)
       .then(audioUrl => {
-        if (audioUrl) {
-          playAudio(audioUrl, audioId);
-        } else {
-          setVoiceTestError('Não foi possível gerar o áudio de teste');
-        }
+        playAudio(audioUrl, audioId);
       })
       .catch(error => {
         console.error('Erro no teste de voz:', error);
@@ -440,7 +436,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
   };
 
   const testVoicePreview = (voice: Voice) => {
-    if (voice.preview_url) {
+    // Always use real-time generation for better quality and consistency
+    testVoice(voice);
+  };
+
+  const testVoicePreviewOld = (voice: Voice) => {
+    // Fallback method using preview_url if available
+    if (voice.preview_url && voice.preview_url.trim()) {
       const audioId = `voice-preview-${voice.id}`;
       if (isAudioPlaying(audioId)) {
         pauseAudio();
@@ -448,6 +450,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
         playAudio(voice.preview_url, audioId);
       }
     } else {
+      // If no preview URL, generate audio in real-time
       testVoice(voice);
     }
   };
