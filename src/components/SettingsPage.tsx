@@ -372,7 +372,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
           method: 'POST',
           headers: requestHeaders,
           body: JSON.stringify(requestBody)
-            format: "mp3"
+        });
+        
        console.log('🐟 Fish-Audio Response Headers:', Object.fromEntries(response.headers.entries()));
 
         console.log('🐟 Fish-Audio Response Status:', response.status);
