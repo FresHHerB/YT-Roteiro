@@ -46,6 +46,8 @@ interface SettingsPageProps {
 const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
   const [apis, setApis] = useState<API[]>([]);
   const [voices, setVoices] = useState<Voice[]>([]);
+  const [filteredVoices, setFilteredVoices] = useState<Voice[]>([]);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'ElevenLabs' | 'Fish-Audio'>('all');
   const [isLoadingApis, setIsLoadingApis] = useState(true);
   const [isLoadingVoices, setIsLoadingVoices] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -60,14 +62,16 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [editingVoice, setEditingVoice] = useState<Voice | null>(null);
   const [voiceForm, setVoiceForm] = useState({
-    nome_voz: '',
     voice_id: '',
     plataforma: '',
-    idioma: '',
-    genero: '',
-    preview_url: ''
   });
   const [isSavingVoice, setIsSavingVoice] = useState(false);
+  const [isCollectingVoiceData, setIsCollectingVoiceData] = useState(false);
+  const [collectedVoiceData, setCollectedVoiceData] = useState<{
+    nome_voz: string;
+    idioma: string;
+    genero: string;
+  } | null>(null);
   
   // Audio State
   const [playingAudio, setPlayingAudio] = useState<{ id: string; audio: HTMLAudioElement } | null>(null);
@@ -78,6 +82,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
     loadApis();
     loadVoices();
   }, []);
+
+  useEffect(() => {
+    // Filter voices based on active filter
+    if (activeFilter === 'all') {
+      setFilteredVoices(voices);
+    } else {
+      setFilteredVoices(voices.filter(voice => voice.plataforma === activeFilter));
+    }
+  }, [voices, activeFilter]);
 
   // Audio control functions
   const playAudio = (audioUrl: string, audioId: string) => {
@@ -154,6 +167,89 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
       setMessage({ type: 'error', text: 'Erro de conexão.' });
     } finally {
       setIsLoadingVoices(false);
+    }
+  };
+
+  // Collect voice data automatically
+  const collectVoiceData = async (voiceId: string, platform: string) => {
+    setIsCollectingVoiceData(true);
+    setCollectedVoiceData(null);
+    
+    try {
+      const apiData = apis.find(api => api.plataforma === platform);
+      if (!apiData) {
+        throw new Error(`API key não encontrada para ${platform}`);
+      }
+
+      if (platform === 'ElevenLabs') {
+        const response = await fetch(`https://api.elevenlabs.io/v1/voices/${voiceId}`, {
+          method: 'GET',
+          headers: {
+            'xi-api-key': apiData.api_key
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro ElevenLabs: ${response.status} - ${errorText}`);
+        }
+
+        const voiceData = await response.json();
+        
+        // Map language codes to names
+        const languageMap: { [key: string]: string } = {
+          'en': 'Inglês',
+          'pt': 'Português',
+          'es': 'Espanhol',
+          'fr': 'Francês',
+          'de': 'Alemão',
+          'it': 'Italiano',
+          'ja': 'Japonês',
+          'ko': 'Coreano',
+          'zh': 'Chinês'
+        };
+
+        // Map gender
+        const genderMap: { [key: string]: string } = {
+          'male': 'Masculino',
+          'female': 'Feminino',
+          'neutral': 'Neutro'
+        };
+
+        setCollectedVoiceData({
+          nome_voz: voiceData.name || 'Nome não disponível',
+          idioma: languageMap[voiceData.labels?.language || ''] || voiceData.labels?.language || 'Não especificado',
+          genero: genderMap[voiceData.labels?.gender || ''] || voiceData.labels?.gender || 'Não especificado'
+        });
+
+      } else if (platform === 'Fish-Audio') {
+        const response = await fetch(`https://api.fish.audio/model/${voiceId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${apiData.api_key}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro Fish-Audio: ${response.status} - ${errorText}`);
+        }
+
+        const modelData = await response.json();
+        
+        setCollectedVoiceData({
+          nome_voz: modelData.title || 'Nome não disponível',
+          idioma: modelData.languages?.join(', ') || 'Não especificado',
+          genero: 'Não especificado' // Fish-Audio não fornece gênero diretamente
+        });
+      }
+
+    } catch (error) {
+      console.error('Erro ao coletar dados da voz:', error);
+      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao coletar dados da voz' });
+    } finally {
+      setIsCollectingVoiceData(false);
     }
   };
 
@@ -239,23 +335,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
     if (voice) {
       setEditingVoice(voice);
       setVoiceForm({
-        nome_voz: voice.nome_voz,
         voice_id: voice.voice_id,
-        plataforma: voice.plataforma,
+        plataforma: voice.plataforma
+      });
+      setCollectedVoiceData({
+        nome_voz: voice.nome_voz,
         idioma: voice.idioma || '',
-        genero: voice.genero || '',
-        preview_url: voice.preview_url || ''
+        genero: voice.genero || ''
       });
     } else {
       setEditingVoice(null);
       setVoiceForm({
-        nome_voz: '',
         voice_id: '',
-        plataforma: '',
-        idioma: '',
-        genero: '',
-        preview_url: ''
+        plataforma: ''
       });
+      setCollectedVoiceData(null);
     }
     setShowVoiceModal(true);
   };
@@ -264,18 +358,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
     setShowVoiceModal(false);
     setEditingVoice(null);
     setVoiceForm({
-      nome_voz: '',
       voice_id: '',
-      plataforma: '',
-      idioma: '',
-      genero: '',
-      preview_url: ''
+      plataforma: ''
     });
+    setCollectedVoiceData(null);
   };
 
   const saveVoice = async () => {
-    if (!voiceForm.nome_voz.trim() || !voiceForm.voice_id.trim() || !voiceForm.plataforma.trim()) {
-      setMessage({ type: 'error', text: 'Preencha os campos obrigatórios (Nome, ID e Plataforma).' });
+    if (!voiceForm.voice_id.trim() || !voiceForm.plataforma.trim() || !collectedVoiceData) {
+      setMessage({ type: 'error', text: 'Preencha o Voice ID, selecione a plataforma e colete os dados automaticamente.' });
       return;
     }
 
@@ -286,12 +377,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
         const { error } = await supabase
           .from('vozes')
           .update({
-            nome_voz: voiceForm.nome_voz,
+            nome_voz: collectedVoiceData.nome_voz,
             voice_id: voiceForm.voice_id,
             plataforma: voiceForm.plataforma,
-            idioma: voiceForm.idioma || null,
-            genero: voiceForm.genero || null,
-            preview_url: voiceForm.preview_url || null
+            idioma: collectedVoiceData.idioma || null,
+            genero: collectedVoiceData.genero || null
           })
           .eq('id', editingVoice.id);
 
@@ -302,12 +392,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
         const { error } = await supabase
           .from('vozes')
           .insert([{
-            nome_voz: voiceForm.nome_voz,
+            nome_voz: collectedVoiceData.nome_voz,
             voice_id: voiceForm.voice_id,
             plataforma: voiceForm.plataforma,
-            idioma: voiceForm.idioma || null,
-            genero: voiceForm.genero || null,
-            preview_url: voiceForm.preview_url || null
+            idioma: collectedVoiceData.idioma || null,
+            genero: collectedVoiceData.genero || null
           }]);
 
         if (error) throw error;
@@ -594,6 +683,49 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
               </button>
             </div>
 
+            {/* Voice Filters */}
+            <div className="flex items-center space-x-3 mb-6">
+              <button
+                onClick={() => setActiveFilter('all')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeFilter === 'all'
+                    ? 'bg-gray-700 text-white'
+                    : 'bg-gray-800/50 text-gray-400 hover:text-white hover:bg-gray-700/50'
+                }`}
+              >
+                <span>Todas</span>
+                <span className="bg-gray-600 text-white text-xs px-2 py-1 rounded-full">
+                  {voices.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveFilter('ElevenLabs')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeFilter === 'ElevenLabs'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-800/50 text-gray-400 hover:text-white hover:bg-gray-700/50'
+                }`}
+              >
+                <span>ElevenLabs</span>
+                <span className="bg-purple-700 text-white text-xs px-2 py-1 rounded-full">
+                  {voices.filter(v => v.plataforma === 'ElevenLabs').length}
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveFilter('Fish-Audio')}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeFilter === 'Fish-Audio'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-gray-800/50 text-gray-400 hover:text-white hover:bg-gray-700/50'
+                }`}
+              >
+                <span>Fish-Audio</span>
+                <span className="bg-cyan-700 text-white text-xs px-2 py-1 rounded-full">
+                  {voices.filter(v => v.plataforma === 'Fish-Audio').length}
+                </span>
+              </button>
+            </div>
+
             {isLoadingVoices ? (
               <div className="flex items-center justify-center py-8">
                 <div className="flex items-center space-x-3 text-gray-400">
@@ -601,17 +733,21 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                   <span>Carregando vozes...</span>
                 </div>
               </div>
-            ) : voices.length === 0 ? (
+            ) : filteredVoices.length === 0 ? (
               <div className="text-center py-8">
                 <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Mic className="w-8 h-8 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-light text-white mb-2">Nenhuma voz configurada</h3>
-                <p className="text-gray-400">Adicione suas vozes de IA para começar</p>
+                <h3 className="text-lg font-light text-white mb-2">
+                  {activeFilter === 'all' ? 'Nenhuma voz configurada' : `Nenhuma voz ${activeFilter} encontrada`}
+                </h3>
+                <p className="text-gray-400">
+                  {activeFilter === 'all' ? 'Adicione suas vozes de IA para começar' : `Configure vozes da plataforma ${activeFilter}`}
+                </p>
               </div>
             ) : (
               <div className="space-y-4 max-h-96 overflow-y-auto">
-                {voices.map((voice) => (
+                {filteredVoices.map((voice) => (
                   <VoiceCard
                     key={voice.id}
                     voice={voice}
@@ -743,19 +879,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-300">
-                    Nome da Voz *
-                  </label>
-                  <input
-                    type="text"
-                    value={voiceForm.nome_voz}
-                    onChange={(e) => setVoiceForm(prev => ({ ...prev, nome_voz: e.target.value }))}
-                    placeholder="Ex: Maria Brasileira"
-                    className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-300">
                     Voice ID *
                   </label>
                   <input
@@ -766,68 +889,73 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                     className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Plataforma *
-                </label>
-                <select
-                  value={voiceForm.plataforma}
-                  onChange={(e) => setVoiceForm(prev => ({ ...prev, plataforma: e.target.value }))}
-                  className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 text-white"
-                >
-                  <option value="">Selecione uma plataforma</option>
-                  <option value="ElevenLabs">ElevenLabs</option>
-                  <option value="Fish-Audio">Fish-Audio</option>
-                  <option value="OpenAI">OpenAI</option>
-                  <option value="Google">Google</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-300">
-                    Idioma
-                  </label>
-                  <input
-                    type="text"
-                    value={voiceForm.idioma}
-                    onChange={(e) => setVoiceForm(prev => ({ ...prev, idioma: e.target.value }))}
-                    placeholder="Ex: Português"
-                    className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                  />
-                </div>
 
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-300">
-                    Gênero
+                    Plataforma *
                   </label>
                   <select
-                    value={voiceForm.genero}
-                    onChange={(e) => setVoiceForm(prev => ({ ...prev, genero: e.target.value }))}
+                    value={voiceForm.plataforma}
+                    onChange={(e) => setVoiceForm(prev => ({ ...prev, plataforma: e.target.value }))}
                     className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 text-white"
                   >
-                    <option value="">Selecione o gênero</option>
-                    <option value="Masculino">Masculino</option>
-                    <option value="Feminino">Feminino</option>
-                    <option value="Neutro">Neutro</option>
+                    <option value="">Selecione uma plataforma</option>
+                    <option value="ElevenLabs">ElevenLabs</option>
+                    <option value="Fish-Audio">Fish-Audio</option>
                   </select>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  URL de Preview
-                </label>
-                <input
-                  type="url"
-                  value={voiceForm.preview_url}
-                  onChange={(e) => setVoiceForm(prev => ({ ...prev, preview_url: e.target.value }))}
-                  placeholder="https://exemplo.com/audio.mp3"
-                  className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
+              {/* Auto-collect button */}
+              <div className="flex justify-center">
+                <button
+                  onClick={() => collectVoiceData(voiceForm.voice_id, voiceForm.plataforma)}
+                  disabled={!voiceForm.voice_id.trim() || !voiceForm.plataforma.trim() || isCollectingVoiceData}
+                  className={`
+                    flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all duration-200
+                    ${!voiceForm.voice_id.trim() || !voiceForm.plataforma.trim() || isCollectingVoiceData
+                      ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }
+                  `}
+                >
+                  {isCollectingVoiceData ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Coletando dados...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-5 h-5" />
+                      <span>Coletar Dados Automaticamente</span>
+                    </>
+                  )}
+                </button>
               </div>
+
+              {/* Collected data display */}
+              {collectedVoiceData && (
+                <div className="bg-green-900/20 border border-green-800 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                    <span className="text-green-400 font-medium">Dados coletados com sucesso!</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-400">Nome:</span>
+                      <p className="text-white font-medium">{collectedVoiceData.nome_voz}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Idioma:</span>
+                      <p className="text-white font-medium">{collectedVoiceData.idioma}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Gênero:</span>
+                      <p className="text-white font-medium">{collectedVoiceData.genero}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-700">
@@ -839,10 +967,10 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
               </button>
               <button
                 onClick={saveVoice}
-                disabled={isSavingVoice || !voiceForm.nome_voz.trim() || !voiceForm.voice_id.trim() || !voiceForm.plataforma.trim()}
+                disabled={isSavingVoice || !voiceForm.voice_id.trim() || !voiceForm.plataforma.trim() || !collectedVoiceData}
                 className={`
                   flex items-center space-x-2 px-6 py-2 rounded-lg font-medium transition-all duration-200
-                  ${isSavingVoice || !voiceForm.nome_voz.trim() || !voiceForm.voice_id.trim() || !voiceForm.plataforma.trim()
+                  ${isSavingVoice || !voiceForm.voice_id.trim() || !voiceForm.plataforma.trim() || !collectedVoiceData
                     ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                     : 'bg-purple-600 hover:bg-purple-700 text-white'
                   }
