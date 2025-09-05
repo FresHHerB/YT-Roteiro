@@ -58,6 +58,9 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [generatedScript, setGeneratedScript] = useState<string>('');
   const [scriptCharCount, setScriptCharCount] = useState<number>(0);
+  const [editedScript, setEditedScript] = useState<string>('');
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [audioMessage, setAudioMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   
   // Settings modal state
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -271,6 +274,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         
         if (result && result.output) {
           setGeneratedScript(result.output);
+          setEditedScript(result.output);
           setScriptCharCount(result.cont_chars || 0);
           setMessage({ type: 'success', text: 'Roteiro gerado com sucesso!' });
         } else {
@@ -290,6 +294,58 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
       setMessage({ type: 'error', text: 'Erro ao gerar roteiro. Tente novamente.' });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const generateAudio = async () => {
+    if (!selectedChannel || !editedScript.trim()) {
+      setAudioMessage({ type: 'error', text: 'Roteiro não disponível para gerar áudio.' });
+      return;
+    }
+
+    if (!selectedChannel.voz_prefereida) {
+      setAudioMessage({ type: 'error', text: 'Nenhuma voz preferida configurada para este canal.' });
+      return;
+    }
+
+    setIsGeneratingAudio(true);
+    setAudioMessage(null);
+
+    try {
+      // Get voice data
+      const voice = voices.find(v => v.id === selectedChannel.voz_prefereida);
+      if (!voice) {
+        throw new Error('Voz preferida não encontrada');
+      }
+
+      const payload = {
+        roteiro: editedScript,
+        plataforma: voice.plataforma,
+        voice_id: voice.voice_id
+      };
+
+      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook-test/gerarAudio', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setAudioMessage({ type: 'success', text: 'Áudio gerado com sucesso!' });
+        console.log('Audio generation result:', result);
+      } else {
+        const errorText = await response.text();
+        console.error('Erro HTTP:', response.status, errorText);
+        throw new Error('Falha na geração do áudio');
+      }
+    } catch (error) {
+      console.error('Erro completo:', error);
+      setAudioMessage({ type: 'error', text: 'Erro ao gerar áudio. Tente novamente.' });
+    } finally {
+      setIsGeneratingAudio(false);
     }
   };
 
@@ -678,7 +734,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => navigator.clipboard.writeText(generatedScript)}
+                      onClick={() => navigator.clipboard.writeText(editedScript)}
                       className="flex items-center space-x-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all duration-200"
                     >
                       <Copy className="w-4 h-4" />
@@ -686,7 +742,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                     </button>
                     <button
                       onClick={() => {
-                        const blob = new Blob([generatedScript], { type: 'text/plain' });
+                        const blob = new Blob([editedScript], { type: 'text/plain' });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
@@ -707,9 +763,71 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
               <p className="text-gray-400 text-sm">Canal: {selectedChannel?.nome_canal}</p>
             </div>
             
-            <div className="bg-black/50 rounded-xl border border-gray-700 p-6">
-              <div className="whitespace-pre-wrap text-gray-300 leading-relaxed">
-                {generatedScript}
+            <div className="space-y-4">
+              <div className="bg-black/50 rounded-xl border border-gray-700 p-6 h-80 overflow-y-auto">
+                <textarea
+                  value={editedScript}
+                  onChange={(e) => setEditedScript(e.target.value)}
+                  className="w-full h-full bg-transparent border-none outline-none resize-none text-gray-300 leading-relaxed placeholder:text-gray-500"
+                  placeholder="Roteiro gerado aparecerá aqui..."
+                />
+              </div>
+              
+              {/* Audio Generation Section */}
+              <div className="flex flex-col items-center space-y-4">
+                {/* Audio Message */}
+                {audioMessage && (
+                  <div className={`p-3 rounded-xl text-center border text-sm ${
+                    audioMessage.type === 'success' 
+                      ? 'bg-green-900/20 text-green-400 border-green-800' 
+                      : 'bg-red-900/20 text-red-400 border-red-800'
+                  }`}>
+                    <span className="font-medium">{audioMessage.text}</span>
+                  </div>
+                )}
+                
+                {/* Voice Info */}
+                {selectedChannel?.voz_prefereida && (
+                  <div className="flex items-center space-x-3 text-sm text-gray-400">
+                    <Mic className="w-4 h-4" />
+                    <span>
+                      Voz: {voices.find(v => v.id === selectedChannel.voz_prefereida)?.nome_voz || 'Não encontrada'} 
+                      ({voices.find(v => v.id === selectedChannel.voz_prefereida)?.plataforma || 'N/A'})
+                    </span>
+                  </div>
+                )}
+                
+                {/* Generate Audio Button */}
+                <button
+                  onClick={generateAudio}
+                  disabled={!editedScript.trim() || isGeneratingAudio || !selectedChannel?.voz_prefereida}
+                  className={`
+                    flex items-center space-x-3 px-8 py-3 rounded-xl font-medium transition-all duration-300 transform
+                    ${!editedScript.trim() || isGeneratingAudio || !selectedChannel?.voz_prefereida
+                      ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
+                      : 'bg-green-600 hover:bg-green-700 text-white hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
+                    }
+                  `}
+                >
+                  {isGeneratingAudio ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Gerando Áudio...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-5 h-5" />
+                      <span>Gerar Áudio</span>
+                    </>
+                  )}
+                </button>
+                
+                {/* Voice Configuration Warning */}
+                {!selectedChannel?.voz_prefereida && (
+                  <p className="text-yellow-400 text-sm text-center">
+                    Configure uma voz preferida nas configurações do canal para gerar áudio
+                  </p>
+                )}
               </div>
             </div>
           </div>
