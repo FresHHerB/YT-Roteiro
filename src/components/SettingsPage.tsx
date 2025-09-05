@@ -1426,6 +1426,3 @@ const ApiCard: React.FC<ApiCardProps> = ({ api, onEdit, onDelete }) => {
       </div>
     </div>
   );
-};
-
-export default SettingsPage;
