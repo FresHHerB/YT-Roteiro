@@ -333,22 +333,6 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
       });
   };
 
-  const playSelectedVoicePreviewOld = () => {
-    // Fallback method using preview_url if available
-    const previewUrl = getSelectedVoicePreviewUrl();
-    if (previewUrl && selectedVoiceId) {
-      const audioId = `voice-preview-${selectedVoiceId}`;
-      if (isAudioPlaying(audioId)) {
-        pauseAudio();
-      } else {
-        playAudio(previewUrl, audioId);
-      }
-    } else if (selectedVoiceId) {
-      // If no preview URL, generate audio in real-time
-      playSelectedVoicePreview();
-    }
-  };
-
   const copyToClipboard = async () => {
     if (editedPrompt) {
       try {

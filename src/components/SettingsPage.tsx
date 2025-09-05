@@ -441,23 +441,28 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
   };
 
   const testVoicePreview = (voice: Voice) => {
-    // Always use real-time generation for better quality and consistency
-    testVoice(voice);
-  };
-
-  const testVoicePreviewOld = (voice: Voice) => {
-    // Fallback method using preview_url if available
-    if (voice.preview_url && voice.preview_url.trim()) {
-      const audioId = `voice-preview-${voice.id}`;
-      if (isAudioPlaying(audioId)) {
-        pauseAudio();
-      } else {
-        playAudio(voice.preview_url, audioId);
-      }
-    } else {
-      // If no preview URL, generate audio in real-time
-      testVoice(voice);
+    const audioId = `voice-preview-${voice.id}`;
+    
+    if (isAudioPlaying(audioId)) {
+      pauseAudio();
+      return;
     }
+
+    setIsTestingVoice(true);
+    setVoiceTestError('');
+
+    generateVoiceTest(voice)
+      .then(audioUrl => {
+        playAudio(audioUrl, audioId);
+      })
+      .catch(error => {
+        console.error('Erro no teste de voz:', error);
+        setVoiceTestError(error instanceof Error ? error.message : 'Erro ao testar voz');
+        setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao testar voz' });
+      })
+      .finally(() => {
+        setIsTestingVoice(false);
+      });
   };
 
   return (
