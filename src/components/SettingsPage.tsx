@@ -72,6 +72,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
     idioma: string;
     genero: string;
   } | null>(null);
+  const [autoCollectTimeout, setAutoCollectTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [canPlayPreview, setCanPlayPreview] = useState(false);
   
   // Audio State
   const [playingAudio, setPlayingAudio] = useState<{ id: string; audio: HTMLAudioElement } | null>(null);
@@ -172,8 +174,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
 
   // Collect voice data automatically
   const collectVoiceData = async (voiceId: string, platform: string) => {
+    if (!voiceId.trim() || !platform.trim()) {
+      setCollectedVoiceData(null);
+      setCanPlayPreview(false);
+      return;
+    }
+
     setIsCollectingVoiceData(true);
     setCollectedVoiceData(null);
+    setCanPlayPreview(false);
     
     try {
       const apiData = apis.find(api => api.plataforma === platform);
@@ -221,6 +230,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
           idioma: languageMap[voiceData.labels?.language || ''] || voiceData.labels?.language || 'Não especificado',
           genero: genderMap[voiceData.labels?.gender || ''] || voiceData.labels?.gender || 'Não especificado'
         });
+        setCanPlayPreview(true);
 
       } else if (platform === 'Fish-Audio') {
         const response = await fetch(`https://api.fish.audio/model/${voiceId}`, {
@@ -243,14 +253,77 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
           idioma: modelData.languages?.join(', ') || 'Não especificado',
           genero: 'Não especificado' // Fish-Audio não fornece gênero diretamente
         });
+        setCanPlayPreview(true);
       }
 
     } catch (error) {
       console.error('Erro ao coletar dados da voz:', error);
-      setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao coletar dados da voz' });
+      // Não mostrar erro global no modal, apenas limpar dados
+      setCollectedVoiceData(null);
+      setCanPlayPreview(false);
     } finally {
       setIsCollectingVoiceData(false);
     }
+  };
+
+  // Auto-collect data when voice_id or platform changes
+  const handleVoiceFormChange = (field: string, value: string) => {
+    setVoiceForm(prev => ({ ...prev, [field]: value }));
+    
+    // Clear existing timeout
+    if (autoCollectTimeout) {
+      clearTimeout(autoCollectTimeout);
+    }
+    
+    // Set new timeout for auto-collection
+    const newTimeout = setTimeout(() => {
+      const updatedForm = { ...voiceForm, [field]: value };
+      if (updatedForm.voice_id.trim() && updatedForm.plataforma.trim()) {
+        collectVoiceData(updatedForm.voice_id, updatedForm.plataforma);
+      }
+    }, 800); // 800ms delay after user stops typing
+    
+    setAutoCollectTimeout(newTimeout);
+  };
+
+  // Test voice preview in modal
+  const testVoiceInModal = () => {
+    if (!collectedVoiceData || !voiceForm.voice_id || !voiceForm.plataforma) return;
+    
+    const tempVoice: Voice = {
+      id: 0,
+      nome_voz: collectedVoiceData.nome_voz,
+      voice_id: voiceForm.voice_id,
+      plataforma: voiceForm.plataforma,
+      idioma: collectedVoiceData.idioma,
+      genero: collectedVoiceData.genero,
+      created_at: new Date().toISOString()
+    };
+    
+    const audioId = `modal-voice-preview`;
+    
+    if (isAudioPlaying(audioId)) {
+      pauseAudio();
+      return;
+    }
+
+    setTestingVoices(prev => new Set(prev).add(0)); // Use ID 0 for modal preview
+
+    generateVoiceTest(tempVoice)
+      .then(audioUrl => {
+        playAudio(audioUrl, audioId);
+      })
+      .catch(error => {
+        console.error('Erro no teste de voz:', error);
+        setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao testar voz' });
+      })
+      .finally(() => {
+        setTestingVoices(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(0);
+          return newSet;
+        });
+      });
   };
 
   // API Functions
@@ -343,6 +416,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
         idioma: voice.idioma || '',
         genero: voice.genero || ''
       });
+      setCanPlayPreview(true);
     } else {
       setEditingVoice(null);
       setVoiceForm({
@@ -350,11 +424,25 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
         plataforma: ''
       });
       setCollectedVoiceData(null);
+      setCanPlayPreview(false);
     }
+    
+    // Clear any existing timeout
+    if (autoCollectTimeout) {
+      clearTimeout(autoCollectTimeout);
+      setAutoCollectTimeout(null);
+    }
+    
     setShowVoiceModal(true);
   };
 
   const closeVoiceModal = () => {
+    // Clear timeout on close
+    if (autoCollectTimeout) {
+      clearTimeout(autoCollectTimeout);
+      setAutoCollectTimeout(null);
+    }
+    
     setShowVoiceModal(false);
     setEditingVoice(null);
     setVoiceForm({
@@ -362,6 +450,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
       plataforma: ''
     });
     setCollectedVoiceData(null);
+    setCanPlayPreview(false);
   };
 
   const saveVoice = async () => {
@@ -879,24 +968,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-300">
-                    Voice ID *
-                  </label>
-                  <input
-                    type="text"
-                    value={voiceForm.voice_id}
-                    onChange={(e) => setVoiceForm(prev => ({ ...prev, voice_id: e.target.value }))}
-                    placeholder="Ex: pNInz6obpgDQGcFmaJgB"
-                    className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-300">
                     Plataforma *
                   </label>
                   <select
                     value={voiceForm.plataforma}
-                    onChange={(e) => setVoiceForm(prev => ({ ...prev, plataforma: e.target.value }))}
+                    onChange={(e) => handleVoiceFormChange('plataforma', e.target.value)}
                     className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 text-white"
                   >
                     <option value="">Selecione uma plataforma</option>
@@ -904,54 +980,111 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                     <option value="Fish-Audio">Fish-Audio</option>
                   </select>
                 </div>
-              </div>
 
-              {/* Auto-collect button */}
-              <div className="flex justify-center">
-                <button
-                  onClick={() => collectVoiceData(voiceForm.voice_id, voiceForm.plataforma)}
-                  disabled={!voiceForm.voice_id.trim() || !voiceForm.plataforma.trim() || isCollectingVoiceData}
-                  className={`
-                    flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all duration-200
-                    ${!voiceForm.voice_id.trim() || !voiceForm.plataforma.trim() || isCollectingVoiceData
-                      ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                    }
-                  `}
-                >
-                  {isCollectingVoiceData ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Coletando dados...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-5 h-5" />
-                      <span>Coletar Dados Automaticamente</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Collected data display */}
-              {collectedVoiceData && (
-                <div className="bg-green-900/20 border border-green-800 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <CheckCircle className="w-5 h-5 text-green-400" />
-                    <span className="text-green-400 font-medium">Dados coletados com sucesso!</span>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Voice ID *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={voiceForm.voice_id}
+                      onChange={(e) => handleVoiceFormChange('voice_id', e.target.value)}
+                      placeholder="Cole o Voice ID da plataforma selecionada"
+                      className="w-full p-3 bg-black border-2 border-green-500 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
+                    />
+                    {isCollectingVoiceData && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <Loader2 className="w-5 h-5 animate-spin text-green-500" />
+                      </div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-400">Nome:</span>
-                      <p className="text-white font-medium">{collectedVoiceData.nome_voz}</p>
+                  <p className="text-xs text-gray-400">
+                    Cole o Voice ID da plataforma selecionada
+                  </p>
+                </div>
+              </div>
+
+              {/* Auto-collected data display */}
+              {collectedVoiceData && (
+                <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                    <span className="text-green-400 font-medium">Dados Auto-preenchidos</span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-gray-300">
+                        Nome da Voz
+                      </label>
+                      <input
+                        type="text"
+                        value={collectedVoiceData.nome_voz}
+                        onChange={(e) => setCollectedVoiceData(prev => prev ? { ...prev, nome_voz: e.target.value } : null)}
+                        className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white"
+                      />
                     </div>
-                    <div>
-                      <span className="text-gray-400">Idioma:</span>
-                      <p className="text-white font-medium">{collectedVoiceData.idioma}</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="block text-sm font-medium text-gray-300">
+                          Idioma
+                        </label>
+                        <input
+                          type="text"
+                          value={collectedVoiceData.idioma}
+                          onChange={(e) => setCollectedVoiceData(prev => prev ? { ...prev, idioma: e.target.value } : null)}
+                          className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white"
+                        />
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <label className="block text-sm font-medium text-gray-300">
+                          Gênero
+                        </label>
+                        <input
+                          type="text"
+                          value={collectedVoiceData.genero}
+                          onChange={(e) => setCollectedVoiceData(prev => prev ? { ...prev, genero: e.target.value } : null)}
+                          className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-gray-400">Gênero:</span>
-                      <p className="text-white font-medium">{collectedVoiceData.genero}</p>
+                    
+                    {/* Voice Preview Button */}
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-gray-300">
+                        Teste de Voz
+                      </label>
+                      <button
+                        onClick={testVoiceInModal}
+                        disabled={!canPlayPreview || testingVoices.has(0)}
+                        className={`flex items-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 w-full justify-center ${
+                          !canPlayPreview || testingVoices.has(0)
+                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                            : isAudioPlaying('modal-voice-preview')
+                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                            : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`}
+                      >
+                        {testingVoices.has(0) ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Carregando...</span>
+                          </>
+                        ) : isAudioPlaying('modal-voice-preview') ? (
+                          <>
+                            <Square className="w-4 h-4" />
+                            <span>Parar Preview</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4" />
+                            <span>Reproduzir Preview</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -961,7 +1094,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
             <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-700">
               <button
                 onClick={closeVoiceModal}
-                className="px-6 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+                className="px-6 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200 font-medium"
               >
                 Cancelar
               </button>
@@ -972,7 +1105,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                   flex items-center space-x-2 px-6 py-2 rounded-lg font-medium transition-all duration-200
                   ${isSavingVoice || !voiceForm.voice_id.trim() || !voiceForm.plataforma.trim() || !collectedVoiceData
                     ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
                   }
                 `}
               >
@@ -983,8 +1116,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
-                    <span>Salvar</span>
+                    <Plus className="w-4 h-4" />
+                    <span>Adicionar</span>
                   </>
                 )}
               </button>
