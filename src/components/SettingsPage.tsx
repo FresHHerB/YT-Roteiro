@@ -255,15 +255,27 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
   // Generate voice test audio
   const generateVoiceTest = async (voiceId: string, platform: string): Promise<string | null> => {
     try {
+      // Check if API key exists for the platform
       // Get API key for the platform
       const platformApi = apis.find(api => api.plataforma === platform);
       if (!platformApi) {
         throw new Error(`API key não encontrada para ${platform}`);
       }
 
+      // Validate API key is not empty
+      if (!platformApi.api_key || platformApi.api_key.trim() === '') {
+        throw new Error(`API key para ${platform} está vazia. Configure a API key nas configurações.`);
+      }
+
       const testText = "Olá! Este é um teste de voz para verificar a qualidade e o som desta voz artificial.";
 
       if (platform === 'ElevenLabs') {
+        console.log('Fazendo requisição para ElevenLabs:', {
+          url: `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+          voiceId,
+          hasApiKey: !!platformApi.api_key
+        });
+
         const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
           method: 'POST',
           headers: {
@@ -282,14 +294,30 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
         });
 
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Erro ElevenLabs: ${response.status} - ${errorText}`);
+          let errorMessage = `Erro ElevenLabs: ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage += ` - ${errorData.detail?.message || errorData.message || 'Erro desconhecido'}`;
+          } catch {
+            const errorText = await response.text();
+            errorMessage += ` - ${errorText || 'Erro desconhecido'}`;
+          }
+          throw new Error(errorMessage);
         }
 
         const audioBlob = await response.blob();
+        if (audioBlob.size === 0) {
+          throw new Error('Áudio recebido está vazio');
+        }
         return URL.createObjectURL(audioBlob);
 
       } else if (platform === 'Fish-Audio') {
+        console.log('Fazendo requisição para Fish-Audio:', {
+          url: 'https://api.fish.audio/v1/tts',
+          voiceId,
+          hasApiKey: !!platformApi.api_key
+        });
+
         const response = await fetch('https://api.fish.audio/v1/tts', {
           method: 'POST',
           headers: {
@@ -307,17 +335,33 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
         });
 
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Erro Fish-Audio: ${response.status} - ${errorText}`);
+          let errorMessage = `Erro Fish-Audio: ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage += ` - ${errorData.error?.message || errorData.message || 'Erro desconhecido'}`;
+          } catch {
+            const errorText = await response.text();
+            errorMessage += ` - ${errorText || 'Erro desconhecido'}`;
+          }
+          throw new Error(errorMessage);
         }
 
         const audioBlob = await response.blob();
+        if (audioBlob.size === 0) {
+          throw new Error('Áudio recebido está vazio');
+        }
         return URL.createObjectURL(audioBlob);
       }
 
       throw new Error('Plataforma não suportada para teste');
     } catch (error) {
       console.error('Erro ao gerar teste de voz:', error);
+      
+      // Handle network errors specifically
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        throw new Error('Erro de conexão. Verifique sua internet e se a API key está correta.');
+      }
+      
       throw error;
     }
   };
