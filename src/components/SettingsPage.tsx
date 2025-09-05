@@ -72,6 +72,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
   // Voice search state
   const [isSearchingVoice, setIsSearchingVoice] = useState(false);
   const [voiceSearchError, setVoiceSearchError] = useState<string>('');
+  const [isTestingVoice, setIsTestingVoice] = useState(false);
+  const [voiceTestError, setVoiceTestError] = useState<string>('');
   
   // Audio preview state
   const [playingAudio, setPlayingAudio] = useState<{ id: string; audio: HTMLAudioElement } | null>(null);
@@ -215,6 +217,108 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Erro ao reproduzir preview da voz' });
+    }
+  };
+
+  // Voice test function for modal
+  const handleVoiceTest = async () => {
+    const audioId = `voice-test-modal`;
+    
+    if (isAudioPlaying(audioId)) {
+      pauseAudio();
+      return;
+    }
+
+    if (!voiceForm.voice_id.trim() || !voiceForm.plataforma) {
+      setVoiceTestError('Voice ID e plataforma são necessários para o teste');
+      return;
+    }
+
+    setIsTestingVoice(true);
+    setVoiceTestError('');
+
+    try {
+      const audioUrl = await generateVoiceTest(voiceForm.voice_id, voiceForm.plataforma);
+      if (audioUrl) {
+        playAudio(audioUrl, audioId);
+      } else {
+        setVoiceTestError('Não foi possível gerar o áudio de teste');
+      }
+    } catch (error) {
+      console.error('Erro no teste de voz:', error);
+      setVoiceTestError(error instanceof Error ? error.message : 'Erro ao testar voz');
+    } finally {
+      setIsTestingVoice(false);
+    }
+  };
+
+  // Generate voice test audio
+  const generateVoiceTest = async (voiceId: string, platform: string): Promise<string | null> => {
+    try {
+      // Get API key for the platform
+      const platformApi = apis.find(api => api.plataforma === platform);
+      if (!platformApi) {
+        throw new Error(`API key não encontrada para ${platform}`);
+      }
+
+      const testText = "Olá! Este é um teste de voz para verificar a qualidade e o som desta voz artificial.";
+
+      if (platform === 'ElevenLabs') {
+        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'audio/mpeg',
+            'Content-Type': 'application/json',
+            'xi-api-key': platformApi.api_key
+          },
+          body: JSON.stringify({
+            text: testText,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.5
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro ElevenLabs: ${response.status} - ${errorText}`);
+        }
+
+        const audioBlob = await response.blob();
+        return URL.createObjectURL(audioBlob);
+
+      } else if (platform === 'Fish-Audio') {
+        const response = await fetch('https://api.fish.audio/v1/tts', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${platformApi.api_key}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            text: testText,
+            reference_id: voiceId,
+            format: "mp3",
+            mp3_bitrate: 128,
+            opus_bitrate: 128,
+            latency: "normal"
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro Fish-Audio: ${response.status} - ${errorText}`);
+        }
+
+        const audioBlob = await response.blob();
+        return URL.createObjectURL(audioBlob);
+      }
+
+      throw new Error('Plataforma não suportada para teste');
+    } catch (error) {
+      console.error('Erro ao gerar teste de voz:', error);
+      throw error;
     }
   };
 
@@ -491,6 +595,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
     setEditingVoice(null);
     setShowVoiceForm(false);
     setVoiceSearchError('');
+    setVoiceTestError('');
+    setIsTestingVoice(false);
   };
 
   const resetApiForm = () => {
@@ -799,6 +905,49 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                     </p>
                   )}
                 </div>
+
+                {/* Voice Test Button */}
+                {voiceForm.voice_id.trim() && voiceForm.plataforma && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">
+                      Teste de Voz
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleVoiceTest}
+                      disabled={isTestingVoice || !voiceForm.voice_id.trim()}
+                      className={`flex items-center space-x-2 px-4 py-3 rounded-lg text-sm transition-all duration-200 w-full justify-center ${
+                        isTestingVoice || !voiceForm.voice_id.trim()
+                          ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                          : isAudioPlaying(`voice-test-modal`)
+                          ? 'bg-red-600 hover:bg-red-700 text-white'
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
+                    >
+                      {isTestingVoice ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Carregando áudio...</span>
+                        </>
+                      ) : isAudioPlaying(`voice-test-modal`) ? (
+                        <>
+                          <Square className="w-4 h-4" />
+                          <span>Parar Teste</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4" />
+                          <span>Testar Voz</span>
+                        </>
+                      )}
+                    </button>
+                    {voiceTestError && (
+                      <p className="text-xs text-red-400">
+                        {voiceTestError}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Voice Name */}
                 <div className="space-y-2">
