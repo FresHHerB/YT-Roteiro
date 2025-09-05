@@ -124,7 +124,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
   };
 
   // Function to get voice preview URL from API
-  const getVoicePreviewUrl = async (voiceId: string, platform: string): Promise<string | null> => {
+  const getVoicePreviewUrl = async (voiceId: string, platform: string): Promise<{ preview_url: string | null; voice_data?: any }> => {
     try {
       // Get API key for the platform
       const platformApi = apis.find(api => api.plataforma === platform);
@@ -140,30 +140,53 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
         });
 
         if (!response.ok) {
-          throw new Error(`Erro na API ElevenLabs: ${response.status}`);
+          throw new Error(`Voice ID não encontrado na ElevenLabs: ${response.status}`);
         }
 
         const data = await response.json();
-        return data.preview_url || null;
+        return {
+          preview_url: data.preview_url || null,
+          voice_data: {
+            name: data.name,
+            labels: data.labels,
+            description: data.description
+          }
+        };
       } else if (platform === 'Fish-Audio') {
-        const response = await fetch(`https://api.fish.audio/v1/voices/${voiceId}`, {
+        const response = await fetch(`https://api.fish.audio/model/${voiceId}`, {
           headers: {
-            'Authorization': `Bearer ${platformApi.api_key}`
+            'Authorization': `Bearer ${platformApi.api_key}`,
+            'Content-Type': 'application/json'
           }
         });
 
         if (!response.ok) {
-          throw new Error(`Erro na API Fish-Audio: ${response.status}`);
+          throw new Error(`Model ID não encontrado na Fish-Audio: ${response.status}`);
         }
 
         const data = await response.json();
-        return data.preview_url || null;
+        // Fish-Audio não tem preview_url direto, mas tem samples
+        let previewUrl = null;
+        if (data.samples && data.samples.length > 0) {
+          // Pega o primeiro sample como preview
+          previewUrl = data.samples[0].audio_url || null;
+        }
+        
+        return {
+          preview_url: previewUrl,
+          voice_data: {
+            name: data.title,
+            description: data.description,
+            languages: data.languages,
+            type: data.type
+          }
+        };
       }
 
-      return null;
+      return { preview_url: null };
     } catch (error) {
       console.error('Erro ao obter URL de preview:', error);
-      return null;
+      return { preview_url: null };
     }
   };
 
@@ -180,7 +203,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
       setMessage(null);
       
       // Try to get fresh preview URL from API
-      const freshPreviewUrl = await getVoicePreviewUrl(voice.voice_id, voice.plataforma);
+      const { preview_url: freshPreviewUrl } = await getVoicePreviewUrl(voice.voice_id, voice.plataforma);
       
       if (freshPreviewUrl) {
         playAudio(freshPreviewUrl, audioId);
@@ -261,33 +284,41 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
       });
 
       if (!response.ok) {
-        throw new Error(`Voice ID não encontrado na ElevenLabs`);
+        throw new Error(`Voice ID não encontrado na ElevenLabs: ${response.status}`);
       }
 
       const data = await response.json();
       return {
         nome_voz: data.name,
         preview_url: data.preview_url,
-        idioma: data.labels?.language || '',
+        idioma: data.labels?.accent || data.verified_languages?.[0]?.language || '',
         genero: data.labels?.gender || ''
       };
     } else if (platform === 'Fish-Audio') {
-      const response = await fetch(`https://api.fish.audio/v1/voices/${voiceId}`, {
+      const response = await fetch(`https://api.fish.audio/model/${voiceId}`, {
         headers: {
-          'Authorization': `Bearer ${platformApi.api_key}`
+          'Authorization': `Bearer ${platformApi.api_key}`,
+          'Content-Type': 'application/json'
         }
       });
 
       if (!response.ok) {
-        throw new Error(`Voice ID não encontrado na Fish-Audio`);
+        throw new Error(`Model ID não encontrado na Fish-Audio: ${response.status}`);
       }
 
       const data = await response.json();
+      
+      // Fish-Audio não tem preview_url direto, mas tem samples
+      let previewUrl = null;
+      if (data.samples && data.samples.length > 0) {
+        previewUrl = data.samples[0].audio_url || null;
+      }
+      
       return {
-        nome_voz: data.name,
-        preview_url: data.preview_url,
-        idioma: data.language || '',
-        genero: data.gender || ''
+        nome_voz: data.title,
+        preview_url: previewUrl,
+        idioma: data.languages?.join(', ') || '',
+        genero: '' // Fish-Audio não fornece informação de gênero diretamente
       };
     }
 
@@ -313,7 +344,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
         genero: voiceData.genero
       }));
       
-      setVoiceSearchError('Dados da voz carregados com sucesso!');
+      setVoiceSearchError('✅ Dados da voz carregados com sucesso!');
     } catch (error) {
       setVoiceSearchError(error instanceof Error ? error.message : 'Erro ao buscar dados da voz');
     } finally {
@@ -820,274 +851,4 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                   <button
                     type="button"
                     onClick={resetVoiceForm}
-                    className="px-6 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmittingVoice}
-                    className={`
-                      flex items-center space-x-2 px-6 py-2 rounded-lg font-medium transition-all duration-200
-                      ${isSubmittingVoice
-                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                      }
-                    `}
-                  >
-                    {isSubmittingVoice ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Salvando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        <span>{editingVoice ? 'Atualizar' : 'Salvar'}</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* API Form Modal */}
-      {showApiForm && (
-        <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-50"
-          onClick={() => resetApiForm()}
-        >
-          <div 
-            className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-medium text-white">
-                  {editingApi ? 'Editar API' : 'Adicionar API'}
-                </h3>
-                <button
-                  onClick={resetApiForm}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleApiSubmit} className="space-y-4">
-                {/* Platform Selection */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-300">
-                    Plataforma
-                  </label>
-                  <select
-                    value={apiForm.plataforma}
-                    onChange={(e) => setApiForm(prev => ({ ...prev, plataforma: e.target.value }))}
-                    className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all duration-200 text-white"
-                  >
-                    <option value="ElevenLabs">ElevenLabs</option>
-                    <option value="Fish-Audio">Fish-Audio</option>
-                  </select>
-                </div>
-
-                {/* API Key */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-300">
-                    API Key
-                  </label>
-                  <input
-                    type="password"
-                    value={apiForm.api_key}
-                    onChange={(e) => setApiForm(prev => ({ ...prev, api_key: e.target.value }))}
-                    placeholder="Cole sua API key aqui"
-                    className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                    required
-                  />
-                </div>
-
-                {/* Submit Button */}
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={resetApiForm}
-                    className="px-6 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmittingApi}
-                    className={`
-                      flex items-center space-x-2 px-6 py-2 rounded-lg font-medium transition-all duration-200
-                      ${isSubmittingApi
-                        ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                        : 'bg-green-600 hover:bg-green-700 text-white'
-                      }
-                    `}
-                  >
-                    {isSubmittingApi ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Salvando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        <span>{editingApi ? 'Atualizar' : 'Salvar'}</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Voice Card Component
-interface VoiceCardProps {
-  voice: Voice;
-  onEdit: () => void;
-  onDelete: () => void;
-  onPlayPreview: () => void;
-  isPlaying: boolean;
-}
-
-const VoiceCard: React.FC<VoiceCardProps> = ({ voice, onEdit, onDelete, onPlayPreview, isPlaying }) => {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  const getPlatformColor = (platform: string) => {
-    switch (platform) {
-      case 'ElevenLabs':
-        return 'bg-purple-900/30 text-purple-400';
-      case 'Fish-Audio':
-        return 'bg-cyan-900/30 text-cyan-400';
-      default:
-        return 'bg-blue-900/30 text-blue-400';
-    }
-  };
-
-  return (
-    <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-4 hover:border-gray-600 transition-all duration-200">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <h4 className="font-medium text-white mb-1">{voice.nome_voz}</h4>
-          <div className="flex items-center space-x-3 text-sm text-gray-400">
-            <span className={`px-2 py-1 rounded-full text-xs ${getPlatformColor(voice.plataforma)}`}>
-              {voice.plataforma}
-            </span>
-            {voice.idioma && (
-              <span className="text-xs">{voice.idioma}</span>
-            )}
-            {voice.genero && (
-              <span className="text-xs">{voice.genero}</span>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={onPlayPreview}
-            className={`p-2 rounded-lg transition-all duration-200 ${
-              isPlaying
-                ? 'bg-red-600 hover:bg-red-700 text-white'
-                : 'bg-green-600 hover:bg-green-700 text-white'
-            }`}
-            title={isPlaying ? 'Parar' : 'Testar Voz'}
-          >
-            {isPlaying ? (
-              <Square className="w-4 h-4" />
-            ) : (
-              <Play className="w-4 h-4" />
-            )}
-          </button>
-          <button
-            onClick={onEdit}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200"
-            title="Editar"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onDelete}
-            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-all duration-200"
-            title="Excluir"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-      <div className="text-xs text-gray-500">
-        <p className="mb-1">ID: {voice.voice_id}</p>
-        <p>Criado em {formatDate(voice.created_at)}</p>
-      </div>
-    </div>
-  );
-};
-
-// API Card Component
-interface ApiCardProps {
-  api: API;
-  onEdit: () => void;
-  onDelete: () => void;
-}
-
-const ApiCard: React.FC<ApiCardProps> = ({ api, onEdit, onDelete }) => {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  const maskApiKey = (key: string) => {
-    if (key.length <= 8) return key;
-    return key.substring(0, 4) + '•'.repeat(key.length - 8) + key.substring(key.length - 4);
-  };
-
-  return (
-    <div className="bg-gray-800/50 rounded-xl border border-gray-700 p-4 hover:border-gray-600 transition-all duration-200">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <h4 className="font-medium text-white mb-1">{api.plataforma}</h4>
-          <p className="text-sm text-gray-400 font-mono">
-            {maskApiKey(api.api_key)}
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={onEdit}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-all duration-200"
-            title="Editar"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onDelete}
-            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-all duration-200"
-            title="Excluir"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-      <div className="text-xs text-gray-500">
-        <p>Criado em {formatDate(api.created_at)}</p>
-      </div>
-    </div>
-  );
-};
-
-export default SettingsPage;
+                    className="px-6 py-2 text-gray-400 hover:text
