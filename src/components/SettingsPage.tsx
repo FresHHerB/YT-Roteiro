@@ -229,30 +229,101 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
   });
   const [isAddingApi, setIsAddingApi] = useState(false);
 
-  // Audio control functions
-  const playAudio = (audioUrl: string, audioId: string) => {
-    // Stop any currently playing audio
+  // Real-time voice preview functions
+  const getVoicePreviewUrl = async (voice: Voice): Promise<string | null> => {
+    const apiKey = getApiKeyForPlatform(voice.plataforma);
+    if (!apiKey) {
+      setMessage({ type: 'error', text: `API key não encontrada para ${voice.plataforma}` });
+      return null;
+    }
+
+    try {
+      if (voice.plataforma === 'ElevenLabs') {
+        const response = await fetch('https://api.elevenlabs.io/v1/voices', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'xi-api-key': apiKey,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`ElevenLabs API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const voiceData = data.voices?.find((v: any) => v.voice_id === voice.voice_id);
+        return voiceData?.preview_url || null;
+
+      } else if (voice.plataforma === 'Fish-Audio') {
+        const response = await fetch(`https://api.fish.audio/model/${voice.voice_id}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Fish Audio API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.samples?.[0]?.audio || null;
+      }
+    } catch (error) {
+      console.error('Erro ao obter preview URL:', error);
+      setMessage({ type: 'error', text: `Erro ao obter preview de ${voice.plataforma}` });
+    }
+
+    return null;
+  };
+
+  const playVoicePreview = async (voice: Voice) => {
+    const audioId = `voice-${voice.id}`;
+    
+    // Se já está tocando, para o áudio
+    if (isAudioPlaying(audioId)) {
+      pauseAudio();
+      return;
+    }
+
+    // Para qualquer áudio que esteja tocando
     if (playingAudio) {
       playingAudio.audio.pause();
       playingAudio.audio.currentTime = 0;
     }
 
-    const audio = new Audio(audioUrl);
-    
-    audio.addEventListener('ended', () => {
-      setPlayingAudio(null);
-    });
+    try {
+      // Busca URL de preview em tempo real
+      const previewUrl = await getVoicePreviewUrl(voice);
+      
+      if (!previewUrl) {
+        setMessage({ type: 'error', text: 'Preview não disponível para esta voz' });
+        return;
+      }
 
-    audio.addEventListener('error', () => {
-      setPlayingAudio(null);
-      setMessage({ type: 'error', text: 'Erro ao reproduzir áudio' });
-    });
+      // Cria e reproduz o áudio
+      const audio = new Audio(previewUrl);
+      
+      audio.addEventListener('ended', () => {
+        setPlayingAudio(null);
+      });
 
-    audio.play().then(() => {
+      audio.addEventListener('error', () => {
+        setPlayingAudio(null);
+        setMessage({ type: 'error', text: 'Erro ao reproduzir áudio' });
+      });
+
+      await audio.play();
       setPlayingAudio({ id: audioId, audio });
-    }).catch(() => {
-      setMessage({ type: 'error', text: 'Erro ao reproduzir áudio' });
-    });
+      
+    } catch (error) {
+      console.error('Erro ao reproduzir preview:', error);
+      setMessage({ type: 'error', text: 'Erro ao reproduzir preview da voz' });
+    }
   };
 
   const pauseAudio = () => {
@@ -495,13 +566,18 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
   };
 
   const playVoicePreview = () => {
-    if (voiceForm.preview_url) {
-      const audioId = `preview-${voiceForm.voice_id}`;
-      if (isAudioPlaying(audioId)) {
-        pauseAudio();
-      } else {
-        playAudio(voiceForm.preview_url, audioId);
-      }
+    if (voiceForm.voice_id && voiceForm.nome_voz) {
+      const tempVoice: Voice = {
+        id: 0, // Temporary ID for preview
+        voice_id: voiceForm.voice_id,
+        nome_voz: voiceForm.nome_voz,
+        plataforma: voiceForm.plataforma,
+        idioma: voiceForm.idioma,
+        genero: voiceForm.genero,
+        preview_url: voiceForm.preview_url,
+        created_at: new Date().toISOString()
+      };
+      playVoicePreview(tempVoice);
     }
   };
 
@@ -1030,12 +1106,12 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                     <button
                       onClick={playVoicePreview}
                       className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
-                        isAudioPlaying(`preview-${voiceForm.voice_id}`)
+                        isAudioPlaying(`voice-0`)
                           ? 'bg-red-600 hover:bg-red-700 text-white'
                           : 'bg-green-600 hover:bg-green-700 text-white'
                       }`}
                     >
-                      {isAudioPlaying(`preview-${voiceForm.voice_id}`) ? (
+                      {isAudioPlaying(`voice-0`) ? (
                         <>
                           <Square className="w-4 h-4" />
                           <span>Parar</span>
@@ -1238,8 +1314,12 @@ const VoiceCard: React.FC<VoiceCardProps> = ({ voice, onDelete }) => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          {audioUrl && (
-            <VoicePreviewButton voice={{ ...voice, preview_url: audioUrl }} />
+          {voice && (
+            <VoicePreviewButton 
+              voice={voice} 
+              onPlay={() => playVoicePreview(voice)}
+              isPlaying={isAudioPlaying(`voice-${voice.id}`)}
+            />
           )}
           <button
             onClick={(e) => {
@@ -1259,45 +1339,15 @@ const VoiceCard: React.FC<VoiceCardProps> = ({ voice, onDelete }) => {
 // Voice Preview Button Component
 interface VoicePreviewButtonProps {
   voice: Voice;
+  onPlay: () => void;
+  isPlaying: boolean;
 }
 
-const VoicePreviewButton: React.FC<VoicePreviewButtonProps> = ({ voice }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
-
-  const handlePlayPause = () => {
-    if (isPlaying && audio) {
-      // Pause and reset
-      audio.pause();
-      audio.currentTime = 0;
-      setIsPlaying(false);
-    } else if (voice.preview_url) {
-      // Create new audio and play
-      const newAudio = new Audio(voice.preview_url);
-      
-      newAudio.addEventListener('ended', () => {
-        setIsPlaying(false);
-        setAudio(null);
-      });
-
-      newAudio.addEventListener('error', () => {
-        setIsPlaying(false);
-        setAudio(null);
-      });
-
-      newAudio.play().then(() => {
-        setIsPlaying(true);
-        setAudio(newAudio);
-      }).catch(() => {
-        setIsPlaying(false);
-        setAudio(null);
-      });
-    }
-  };
+const VoicePreviewButton: React.FC<VoicePreviewButtonProps> = ({ voice, onPlay, isPlaying }) => {
 
   return (
     <button
-      onClick={handlePlayPause}
+      onClick={onPlay}
       className={`p-2 rounded-lg transition-all duration-200 ${
         isPlaying
           ? 'text-red-400 hover:text-red-300 hover:bg-red-900/20'
