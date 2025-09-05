@@ -222,51 +222,73 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
 
   // Voice test function for modal
   const handleVoiceTest = async () => {
+    console.log('🎯 handleVoiceTest chamada');
+    console.log('🎯 Form data:', { voiceId: voiceForm.voice_id, platform: voiceForm.plataforma });
+    
     const audioId = `voice-test-modal`;
     
     if (isAudioPlaying(audioId)) {
+      console.log('🎯 Parando áudio atual');
       pauseAudio();
       return;
     }
 
     if (!voiceForm.voice_id.trim() || !voiceForm.plataforma) {
+      console.log('🎯 ❌ Dados insuficientes para teste');
       setVoiceTestError('Voice ID e plataforma são necessários para o teste');
       return;
     }
 
+    console.log('🎯 Iniciando teste de voz...');
     setIsTestingVoice(true);
     setVoiceTestError('');
 
     try {
+      console.log('🎯 Chamando generateVoiceTest...');
       const audioUrl = await generateVoiceTest(voiceForm.voice_id, voiceForm.plataforma);
+      console.log('🎯 Audio URL recebida:', audioUrl);
+      
       if (audioUrl) {
+        console.log('🎯 Reproduzindo áudio...');
         playAudio(audioUrl, audioId);
       } else {
+        console.log('🎯 ❌ Audio URL é null');
         setVoiceTestError('Não foi possível gerar o áudio de teste');
       }
     } catch (error) {
+      console.error('🎯 ❌ Erro no handleVoiceTest:', error);
       console.error('Erro no teste de voz:', error);
       setVoiceTestError(error instanceof Error ? error.message : 'Erro ao testar voz');
     } finally {
+      console.log('🎯 Finalizando teste de voz');
       setIsTestingVoice(false);
     }
   };
 
   // Generate voice test audio
   const generateVoiceTest = async (voiceId: string, platform: string): Promise<string | null> => {
+    console.log('🚀 generateVoiceTest chamada:', { voiceId, platform });
+    
     try {
+      console.log('📋 APIs disponíveis:', apis);
+      
       // Check if API key exists for the platform
       // Get API key for the platform
       const platformApi = apis.find(api => api.plataforma === platform);
+      console.log('🔑 API encontrada para', platform, ':', !!platformApi);
+      
       if (!platformApi) {
+        console.error('❌ API key não encontrada para', platform);
         throw new Error(`API key não encontrada para ${platform}`);
       }
 
       // Validate API key is not empty
       if (!platformApi.api_key || platformApi.api_key.trim() === '') {
+        console.error('❌ API key vazia para', platform);
         throw new Error(`API key para ${platform} está vazia. Configure a API key nas configurações.`);
       }
 
+      console.log('✅ API key válida encontrada para', platform);
       const testText = "Olá! Este é um teste de voz para verificar a qualidade e o som desta voz artificial.";
 
       if (platform === 'ElevenLabs') {
@@ -312,57 +334,62 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
         return URL.createObjectURL(audioBlob);
 
       } else if (platform === 'Fish-Audio') {
+        console.log('🐟 INICIANDO REQUISIÇÃO FISH-AUDIO');
+        console.log('🐟 Voice ID:', voiceId);
+        console.log('🐟 API Key presente:', !!platformApi.api_key);
+        console.log('🐟 API Key (primeiros 10 chars):', platformApi.api_key.substring(0, 10) + '...');
+        
+        const requestBody = {
+          text: testText,
+          reference_id: voiceId,
+          format: "mp3",
+          mp3_bitrate: 128,
+          opus_bitrate: 128,
+          latency: "normal"
+        };
+        
+        const requestHeaders = {
+          'Authorization': `Bearer ${platformApi.api_key}`,
+          'Content-Type': 'application/json'
+        };
+        
         console.log('Fazendo requisição para Fish-Audio:', {
           url: 'https://api.fish.audio/v1/tts',
           voiceId,
           hasApiKey: !!platformApi.api_key
         });
 
-       console.log('Fish-Audio Request Body:', {
-         text: testText,
-         reference_id: voiceId,
-         format: "mp3",
-         mp3_bitrate: 128,
-         opus_bitrate: 128,
-         latency: "normal"
-       });
-
-       console.log('Fish-Audio Request Headers:', {
+       console.log('🐟 Fish-Audio Request Body:', requestBody);
+       console.log('🐟 Fish-Audio Request Headers:', {
          'Authorization': `Bearer ${platformApi.api_key.substring(0, 10)}...`,
          'Content-Type': 'application/json'
        });
+
+        console.log('🐟 Enviando requisição...');
+        
         const response = await fetch('https://api.fish.audio/v1/tts', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${platformApi.api_key}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            text: testText,
-            reference_id: voiceId,
-            format: "mp3",
-            mp3_bitrate: 128,
-            opus_bitrate: 128,
-            latency: "normal"
-          })
+          headers: requestHeaders,
+          body: JSON.stringify(requestBody)
         });
 
-       console.log('Fish-Audio Response Status:', response.status);
-       console.log('Fish-Audio Response Headers:', Object.fromEntries(response.headers.entries()));
+       console.log('🐟 Fish-Audio Response Status:', response.status);
+       console.log('🐟 Fish-Audio Response Headers:', Object.fromEntries(response.headers.entries()));
+       console.log('🐟 Response OK:', response.ok);
 
         if (!response.ok) {
-         console.log('Fish-Audio Error Response Status:', response.status);
+         console.log('🐟 ❌ Fish-Audio Error Response Status:', response.status);
          
          // Log da resposta de erro
          const responseText = await response.text();
-         console.log('Fish-Audio Error Response Text:', responseText);
+         console.log('🐟 ❌ Fish-Audio Error Response Text:', responseText);
          
          // Tentar parsear como JSON
          try {
            const errorData = JSON.parse(responseText);
-           console.log('Fish-Audio Error Data (JSON):', errorData);
+           console.log('🐟 ❌ Fish-Audio Error Data (JSON):', errorData);
          } catch (jsonError) {
-           console.log('Fish-Audio Error - não é JSON válido');
+           console.log('🐟 ❌ Fish-Audio Error - não é JSON válido');
          }
 
           let errorMessage = `Erro Fish-Audio: ${response.status}`;
@@ -375,27 +402,33 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
           throw new Error(errorMessage);
         }
 
-       console.log('Fish-Audio Success Response - convertendo para blob...');
+       console.log('🐟 ✅ Fish-Audio Success Response - convertendo para blob...');
         const audioBlob = await response.blob();
-       console.log('Fish-Audio Audio Blob:', {
+       console.log('🐟 ✅ Fish-Audio Audio Blob:', {
          size: audioBlob.size,
          type: audioBlob.type
        });
        
         if (audioBlob.size === 0) {
+          console.error('🐟 ❌ Áudio recebido está vazio');
           throw new Error('Áudio recebido está vazio');
         }
        
-       console.log('Fish-Audio - criando URL do blob...');
-        return URL.createObjectURL(audioBlob);
+       console.log('🐟 ✅ Fish-Audio - criando URL do blob...');
+        const audioUrl = URL.createObjectURL(audioBlob);
+        console.log('🐟 ✅ Audio URL criada:', audioUrl);
+        return audioUrl;
       }
 
+      console.log('❌ Plataforma não suportada:', platform);
       throw new Error('Plataforma não suportada para teste');
     } catch (error) {
+      console.error('💥 Erro completo em generateVoiceTest:', error);
       console.error('Erro ao gerar teste de voz:', error);
       
       // Handle network errors specifically
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.error('🌐 Erro de rede detectado');
         throw new Error('Erro de conexão. Verifique sua internet e se a API key está correta.');
       }
       
