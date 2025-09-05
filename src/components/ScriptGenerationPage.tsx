@@ -62,6 +62,10 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [audioMessage, setAudioMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedVoiceForAudio, setSelectedVoiceForAudio] = useState<number | null>(null);
+  const [audioSpeed, setAudioSpeed] = useState<number>(1.0);
+  const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string>('');
+  const [isPlayingGeneratedAudio, setIsPlayingGeneratedAudio] = useState(false);
+  const [generatedAudioElement, setGeneratedAudioElement] = useState<HTMLAudioElement | null>(null);
   
   // Settings modal state
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -313,6 +317,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
 
     setIsGeneratingAudio(true);
     setAudioMessage(null);
+    setGeneratedAudioUrl('');
 
     try {
       // Get voice data
@@ -324,10 +329,11 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
       const payload = {
         roteiro: editedScript,
         plataforma: voice.plataforma,
-        voice_id: voice.voice_id
+        voice_id: voice.voice_id,
+        speed: audioSpeed
       };
 
-      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook/gerarAudio', {
+      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook-test/gerarAudio', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -337,8 +343,15 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
 
       if (response.ok) {
         const result = await response.json();
-        setAudioMessage({ type: 'success', text: 'Áudio gerado com sucesso!' });
-        console.log('Audio generation result:', result);
+        
+        // Extrair URL do áudio da resposta
+        if (result && result.length > 0 && result[0].response) {
+          const audioUrl = result[0].response;
+          setGeneratedAudioUrl(audioUrl);
+          setAudioMessage({ type: 'success', text: 'Áudio gerado com sucesso! Você pode reproduzir ou fazer download.' });
+        } else {
+          throw new Error('URL do áudio não encontrada na resposta');
+        }
       } else {
         const errorText = await response.text();
         console.error('Erro HTTP:', response.status, errorText);
@@ -350,6 +363,51 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
     } finally {
       setIsGeneratingAudio(false);
     }
+  };
+
+  // Controle do áudio gerado
+  const playGeneratedAudio = () => {
+    if (!generatedAudioUrl) return;
+
+    if (isPlayingGeneratedAudio && generatedAudioElement) {
+      // Parar áudio
+      generatedAudioElement.pause();
+      generatedAudioElement.currentTime = 0;
+      setIsPlayingGeneratedAudio(false);
+      setGeneratedAudioElement(null);
+    } else {
+      // Reproduzir áudio
+      const audio = new Audio(generatedAudioUrl);
+      
+      audio.addEventListener('ended', () => {
+        setIsPlayingGeneratedAudio(false);
+        setGeneratedAudioElement(null);
+      });
+
+      audio.addEventListener('error', () => {
+        setIsPlayingGeneratedAudio(false);
+        setGeneratedAudioElement(null);
+        setAudioMessage({ type: 'error', text: 'Erro ao reproduzir áudio gerado' });
+      });
+
+      audio.play().then(() => {
+        setIsPlayingGeneratedAudio(true);
+        setGeneratedAudioElement(audio);
+      }).catch(() => {
+        setAudioMessage({ type: 'error', text: 'Erro ao reproduzir áudio gerado' });
+      });
+    }
+  };
+
+  const downloadGeneratedAudio = () => {
+    if (!generatedAudioUrl) return;
+    
+    const link = document.createElement('a');
+    link.href = generatedAudioUrl;
+    link.download = `audio-${selectedChannel?.nome_canal || 'roteiro'}-${new Date().toISOString().split('T')[0]}.mp3`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getSelectedVoicePreviewUrl = () => {
@@ -890,6 +948,29 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                       </span>
                     </div>
                   )}
+
+                  {/* Speed Selector */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">
+                      Velocidade do Áudio
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <span className="text-sm text-gray-400 w-12">0.5x</span>
+                      <input
+                        type="range"
+                        min="0.5"
+                        max="2.0"
+                        step="0.1"
+                        value={audioSpeed}
+                        onChange={(e) => setAudioSpeed(parseFloat(e.target.value))}
+                        className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                      <span className="text-sm text-gray-400 w-12">2.0x</span>
+                      <div className="bg-gray-800 px-3 py-1 rounded-lg text-sm font-medium text-white min-w-[60px] text-center">
+                        {audioSpeed.toFixed(1)}x
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 
                 {/* Audio Generation Section */}
@@ -930,6 +1011,54 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                     )}
                   </button>
                   
+                  {/* Generated Audio Controls */}
+                  {generatedAudioUrl && (
+                    <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 w-full">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
+                            <CheckCircle className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-medium text-white">Áudio Gerado</h3>
+                            <p className="text-sm text-gray-400">Reproduza ou faça download do áudio</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-center space-x-4">
+                        <button
+                          onClick={playGeneratedAudio}
+                          className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                            isPlayingGeneratedAudio
+                              ? 'bg-red-600 hover:bg-red-700 text-white'
+                              : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          }`}
+                        >
+                          {isPlayingGeneratedAudio ? (
+                            <>
+                              <Square className="w-5 h-5" />
+                              <span>Parar Áudio</span>
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-5 h-5" />
+                              <span>Reproduzir Áudio</span>
+                            </>
+                          )}
+                        </button>
+                        
+                        <button
+                          onClick={downloadGeneratedAudio}
+                          className="flex items-center space-x-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all duration-200"
+                        >
+                          <Download className="w-5 h-5" />
+                          <span>Download MP3</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Voice Selection Warning */}
                   {!selectedVoiceForAudio && (
                     <p className="text-yellow-400 text-sm text-center">
