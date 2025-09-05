@@ -69,7 +69,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   const [playingAudio, setPlayingAudio] = useState<{ id: string; audio: HTMLAudioElement } | null>(null);
 
   // Voice test state
-  const [isTestingVoice, setIsTestingVoice] = useState(false);
+  const [testingVoices, setTestingVoices] = useState<Set<number>>(new Set());
   const [voiceTestError, setVoiceTestError] = useState<string>('');
 
   const modelOptions = [
@@ -400,7 +400,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
       return;
     }
 
-    setIsTestingVoice(true);
+    setTestingVoices(prev => new Set(prev).add(selectedVoiceId));
     setVoiceTestError('');
 
     generateVoiceTest(selectedVoiceId)
@@ -412,7 +412,11 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         setVoiceTestError(error instanceof Error ? error.message : 'Erro ao testar voz');
       })
       .finally(() => {
-        setIsTestingVoice(false);
+        setTestingVoices(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(selectedVoiceId);
+          return newSet;
+        });
       });
   };
 
@@ -829,16 +833,16 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                       )}
                       <button
                         onClick={playSelectedVoicePreview}
-                        disabled={isTestingVoice}
+                        disabled={selectedVoiceId ? testingVoices.has(selectedVoiceId) : false}
                         className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
-                          isTestingVoice
+                          selectedVoiceId && testingVoices.has(selectedVoiceId)
                             ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                             : isAudioPlaying(`voice-preview-${selectedVoiceId}`)
                             ? 'bg-red-600 hover:bg-red-700 text-white'
                             : 'bg-green-600 hover:bg-green-700 text-white'
                         }`}
                       >
-                        {isTestingVoice ? (
+                        {selectedVoiceId && testingVoices.has(selectedVoiceId) ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin" />
                             <span>Carregando...</span>

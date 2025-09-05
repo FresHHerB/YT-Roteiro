@@ -71,7 +71,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
   
   // Audio State
   const [playingAudio, setPlayingAudio] = useState<{ id: string; audio: HTMLAudioElement } | null>(null);
-  const [isTestingVoice, setIsTestingVoice] = useState(false);
+  const [testingVoices, setTestingVoices] = useState<Set<number>>(new Set());
   const [voiceTestError, setVoiceTestError] = useState<string>('');
 
   useEffect(() => {
@@ -449,7 +449,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
       return;
     }
 
-    setIsTestingVoice(true);
+    setTestingVoices(prev => new Set(prev).add(voice.id));
     setVoiceTestError('');
 
     generateVoiceTest(voice)
@@ -462,7 +462,11 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
         setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao testar voz' });
       })
       .finally(() => {
-        setIsTestingVoice(false);
+        setTestingVoices(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(voice.id);
+          return newSet;
+        });
       });
   };
 
@@ -615,7 +619,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
                     onDelete={() => deleteVoice(voice.id)}
                     onTest={() => testVoicePreview(voice)}
                     isPlaying={isAudioPlaying(`voice-preview-${voice.id}`) || isAudioPlaying(`voice-test-${voice.id}`)}
-                    isTestingVoice={isTestingVoice}
+                    isTestingVoice={testingVoices.has(voice.id)}
                   />
                 ))}
               </div>
