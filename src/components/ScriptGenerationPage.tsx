@@ -644,4 +644,6 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         });
       });
   };
-}
+};
+
+export default ScriptGenerationPage;
