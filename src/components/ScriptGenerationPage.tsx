@@ -268,8 +268,8 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
       console.log('🚀 Iniciando geração de roteiro...');
       
       const payload = {
-        nomeCanal: selectedChannel.nome_canal,
-        ideiaRoteiro: scriptIdea,
+        nome_canal: selectedChannel.nome_canal,
+        ideia_roteiro: scriptIdea,
         promptRoteiro: selectedChannel.prompt_roteiro,
         idioma: language
       };
