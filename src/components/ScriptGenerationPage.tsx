@@ -334,7 +334,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
       };
 
       console.log('🎵 Enviando payload para geração de áudio:', payload);
-      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook-test/gerarAudio', {
+      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook/gerarAudio', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
