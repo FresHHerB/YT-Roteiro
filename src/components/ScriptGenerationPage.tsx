@@ -881,30 +881,30 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
               </div>
 
               <div className="flex justify-center">
-                <button
-                  onClick={generateScript}
-                  disabled={!selectedChannelId || !scriptIdea.trim() || !language.trim() || isGeneratingScript}
-                  className={`
-                    flex items-center space-x-3 px-8 py-4 rounded-xl font-medium transition-all duration-300 transform
-                    ${!selectedChannelId || !scriptIdea.trim() || !language.trim() || isGeneratingScript
-                      ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
-                      : 'bg-orange-600 text-white hover:bg-orange-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
-                  disabled={!selectedChannelId || !scriptIdea.trim() || !selectedModel.trim() || isGeneratingScript}
-                    }
+              // Corrected "Gerar Roteiro" Button
+              <button
+                onClick={generateScript}
+                disabled={!selectedChannelId || !scriptIdea.trim() || !language.trim() || isGeneratingScript}
+                className={`
+                  flex items-center space-x-3 px-8 py-4 rounded-xl font-medium transition-all duration-300 transform
+                  ${!selectedChannelId || !scriptIdea.trim() || !language.trim() || isGeneratingScript
+                    ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
+                    : 'bg-orange-600 text-white hover:bg-orange-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
                   }
-                >
-                  {isGeneratingScript ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Gerando Roteiro...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="w-5 h-5" />
-                      <span>Gerar Roteiro</span>
-                    </>
-                  )}
-                </button>
+                `}
+              >
+                {isGeneratingScript ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Gerando Roteiro...</span>
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-5 h-5" />
+                    <span>Gerar Roteiro</span>
+                  </>
+                )}
+              </button>
               </div>
             </div>
           </div>
