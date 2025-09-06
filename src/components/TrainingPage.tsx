@@ -39,13 +39,13 @@ interface Voice {
   created_at: string;
 }
 
-interface PromptManagementPageProps {
+interface TrainingPageProps {
   user: any;
   onBack: () => void;
   onNavigate?: (page: PageType) => void;
 }
 
-const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBack, onNavigate }) => {
+const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate }) => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [voices, setVoices] = useState<Voice[]>([]);
   const [isLoadingChannels, setIsLoadingChannels] = useState(true);
@@ -388,14 +388,14 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
-                <Edit3 className="w-6 h-6 text-white" />
+                <BookOpen className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-medium text-white">
-                  Revisar/Editar Conteúdo
+                  Treinar Canal
                 </h1>
                 <p className="text-sm text-gray-400">
-                  Refine e personalize seu conteúdo
+                  Analise e replique a estrutura de canais existentes
                 </p>
               </div>
             </div>
@@ -411,7 +411,7 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
               </button>
               <button
                 onClick={() => onNavigate && onNavigate('prompts')}
-                className="p-2 text-purple-400 bg-purple-900/30 rounded-lg transition-all duration-200"
+                className="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-900/30 rounded-lg transition-all duration-200"
                 title="Revisar/Editar Conteúdo"
               >
                 <Edit3 className="w-5 h-5" />
@@ -836,4 +836,4 @@ const ChannelCard: React.FC<ChannelCardProps> = ({ channel, onEdit }) => {
   );
 };
 
-export default PromptManagementPage;
+export default TrainingPage;
