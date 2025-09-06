@@ -64,6 +64,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   const [selectedVoiceForAudio, setSelectedVoiceForAudio] = useState<number | null>(null);
   const [audioSpeed, setAudioSpeed] = useState<number>(1.0);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string>('');
+  const [generatedAudioBlob, setGeneratedAudioBlob] = useState<Blob | null>(null);
   const [isPlayingGeneratedAudio, setIsPlayingGeneratedAudio] = useState(false);
   const [generatedAudioElement, setGeneratedAudioElement] = useState<HTMLAudioElement | null>(null);
   
@@ -318,6 +319,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
     setIsGeneratingAudio(true);
     setAudioMessage(null);
     setGeneratedAudioUrl('');
+    setGeneratedAudioBlob(null);
 
     try {
       // Get voice data
@@ -344,90 +346,65 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
 
       console.log('📡 Response status:', response.status);
       console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
-      // Log do tipo de conteúdo da resposta
+      
       const contentType = response.headers.get('content-type');
       console.log('📄 Content-Type da resposta:', contentType);
       
       if (response.ok) {
-        // Tentar ler como texto primeiro para ver o formato
-        const responseText = await response.clone().text();
-        console.log('📝 Response como texto:', responseText);
-        let result;
-        try {
-          result = JSON.parse(responseText);
-          console.log('✅ Response parseado como JSON:', result);
-        } catch (parseError) {
-          console.error('❌ Erro ao fazer parse JSON:', parseError);
-          console.log('🔍 Tentando processar como resposta binária...');
+        // Verificar se é áudio binário
+        if (contentType && (contentType.includes('binary/octet-stream') || contentType.includes('audio'))) {
+          console.log('🎵 Resposta é áudio binário, processando...');
           
-          // Se não é JSON, pode ser o arquivo binário direto
-          if (contentType && contentType.includes('audio')) {
-            console.log('🎵 Resposta parece ser áudio direto');
-            const blob = new Blob([responseText], { type: contentType });
-            const audioUrl = URL.createObjectURL(blob);
-            setGeneratedAudioUrl(audioUrl);
-            setAudioMessage({ type: 'success', text: 'Áudio gerado com sucesso!' });
-            return;
+          // Processar como áudio binário
+          const audioBuffer = await response.arrayBuffer();
+          console.log('📦 ArrayBuffer obtido, tamanho:', audioBuffer.byteLength, 'bytes');
+          
+          if (audioBuffer.byteLength === 0) {
+            throw new Error('Arquivo de áudio vazio recebido');
           }
           
-          throw new Error('Resposta não é JSON válido nem áudio direto');
-        }
+          // Criar blob do áudio
+          const audioBlob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+          console.log('📦 Blob criado, tamanho:', audioBlob.size, 'bytes');
           
-        // Processar resposta JSON
-        console.log('🔍 Analisando estrutura da resposta JSON...');
-        console.log('🔍 Tipo da resposta:', typeof result);
-        console.log('🔍 É array?', Array.isArray(result));
-        
-        if (Array.isArray(result)) {
-          console.log('📋 Array com', result.length, 'elementos');
-          result.forEach((item, index) => {
-            console.log(`📋 Item ${index}:`, item);
-          });
-        } else {
-          console.log('📋 Objeto:', result);
-        }
-        
-        // Tentar extrair URL do áudio de diferentes formatos possíveis
-        let audioUrl = null;
-        
-        if (Array.isArray(result) && result.length > 0) {
-          console.log('🎯 Processando como array...');
-          const firstItem = result[0];
-          console.log('🎯 Primeiro item:', firstItem);
+          // Criar URL do blob
+          const audioUrl = URL.createObjectURL(audioBlob);
+          console.log('🔗 URL do blob criada:', audioUrl);
           
-          // Verificar diferentes possíveis campos
-          if (firstItem.response) {
-            audioUrl = firstItem.response;
-            console.log('✅ URL encontrada em result[0].response:', audioUrl);
-          } else if (firstItem.url) {
-            audioUrl = firstItem.url;
-            console.log('✅ URL encontrada em result[0].url:', audioUrl);
-          } else if (firstItem.audio_url) {
-            audioUrl = firstItem.audio_url;
-            console.log('✅ URL encontrada em result[0].audio_url:', audioUrl);
-          }
-        } else if (result && typeof result === 'object') {
-          console.log('🎯 Processando como objeto...');
-          if (result.response) {
-            audioUrl = result.response;
-            console.log('✅ URL encontrada em result.response:', audioUrl);
-          } else if (result.url) {
-            audioUrl = result.url;
-            console.log('✅ URL encontrada em result.url:', audioUrl);
-          } else if (result.audio_url) {
-            audioUrl = result.audio_url;
-            console.log('✅ URL encontrada em result.audio_url:', audioUrl);
-          }
-        }
-        
-        if (audioUrl) {
-          console.log('🎵 URL do áudio extraída:', audioUrl);
           setGeneratedAudioUrl(audioUrl);
+          setGeneratedAudioBlob(audioBlob);
+          console.log('✅ Áudio processado e definido no estado');
           setAudioMessage({ type: 'success', text: 'Áudio gerado com sucesso!' });
         } else {
-          console.error('❌ URL do áudio não encontrada na resposta');
-          console.error('❌ Estrutura completa da resposta:', JSON.stringify(result, null, 2));
-          throw new Error('URL do áudio não encontrada na resposta');
+          // Tentar processar como JSON (para compatibilidade futura)
+          const responseText = await response.clone().text();
+          console.log('📝 Response como texto:', responseText.substring(0, 200) + '...');
+          
+          try {
+            const result = JSON.parse(responseText);
+            console.log('✅ Response parseado como JSON:', result);
+            
+            // Extrair URL do áudio de diferentes formatos possíveis
+            let audioUrl = null;
+            
+            if (Array.isArray(result) && result.length > 0) {
+              const firstItem = result[0];
+              audioUrl = firstItem.response || firstItem.url || firstItem.audio_url;
+            } else if (result && typeof result === 'object') {
+              audioUrl = result.response || result.url || result.audio_url;
+            }
+            
+            if (audioUrl) {
+              console.log('🎵 URL do áudio extraída:', audioUrl);
+              setGeneratedAudioUrl(audioUrl);
+              setAudioMessage({ type: 'success', text: 'Áudio gerado com sucesso!' });
+            } else {
+              throw new Error('URL do áudio não encontrada na resposta JSON');
+            }
+          } catch (parseError) {
+            console.error('❌ Erro ao fazer parse JSON:', parseError);
+            throw new Error('Resposta não é JSON válido nem áudio binário');
+          }
         }
       } else {
         const errorText = await response.text();
@@ -477,20 +454,50 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   };
 
   const downloadGeneratedAudio = () => {
-    if (!generatedAudioUrl) return;
-    
-    const link = document.createElement('a');
-    link.href = generatedAudioUrl;
-    link.download = `audio-${selectedChannel?.nome_canal || 'roteiro'}-${new Date().toISOString().split('T')[0]}.mp3`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (generatedAudioBlob) {
+      // Download direto do blob
+      const url = URL.createObjectURL(generatedAudioBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `audio-${selectedChannel?.nome_canal || 'roteiro'}-${new Date().toISOString().split('T')[0]}.mp3`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else if (generatedAudioUrl) {
+      // Fallback para URL externa
+      const link = document.createElement('a');
+      link.href = generatedAudioUrl;
+      link.download = `audio-${selectedChannel?.nome_canal || 'roteiro'}-${new Date().toISOString().split('T')[0]}.mp3`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
-  const getSelectedVoicePreviewUrl = () => {
-    if (!selectedVoiceId) return null;
-    const voice = voices.find(v => v.id === selectedVoiceId);
-    return voice?.preview_url || null;
+  const copyScriptToClipboard = async () => {
+    if (editedScript) {
+      try {
+        await navigator.clipboard.writeText(editedScript);
+        setMessage({ type: 'success', text: 'Roteiro copiado para a área de transferência!' });
+      } catch (err) {
+        setMessage({ type: 'error', text: 'Erro ao copiar roteiro.' });
+      }
+    }
+  };
+
+  const downloadScript = () => {
+    if (editedScript) {
+      const blob = new Blob([editedScript], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `roteiro-${selectedChannel?.nome_canal || 'script'}-${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   };
 
   // Generate voice test audio
@@ -644,6 +651,618 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         });
       });
   };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
+      {/* Header */}
+      <div className="bg-black/50 backdrop-blur-xl border-b border-gray-800">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={onBack}
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
+                <Mic className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-medium text-white">
+                  Gerar Roteiro e Áudio
+                </h1>
+                <p className="text-sm text-gray-400">
+                  Crie roteiros personalizados e narrações com IA
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              {selectedChannel && (
+                <button
+                  onClick={openSettingsModal}
+                  className="flex items-center space-x-2 px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Configurar Canal</span>
+                </button>
+              )}
+              <button
+                onClick={loadChannels}
+                disabled={isLoadingChannels}
+                className="flex items-center space-x-2 px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoadingChannels ? 'animate-spin' : ''}`} />
+                <span>Atualizar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        {/* Message Display */}
+        {message && (
+          <div className={`mb-8 p-4 rounded-xl text-center border ${
+            message.type === 'success' 
+              ? 'bg-green-900/20 text-green-400 border-green-800' 
+              : 'bg-red-900/20 text-red-400 border-red-800'
+          }`}>
+            <span className="font-medium">{message.text}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          {/* Left Column - Script Generation */}
+          <div className="space-y-8">
+            {/* Channel Selection */}
+            <div className="bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800 p-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-light text-white mb-2">Selecionar Canal</h2>
+                <p className="text-gray-400 text-sm">Escolha o canal para gerar o roteiro</p>
+              </div>
+              
+              {isLoadingChannels ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center space-x-3 text-gray-400">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span>Carregando canais...</span>
+                  </div>
+                </div>
+              ) : channels.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Video className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-light text-white mb-2">Nenhum canal encontrado</h3>
+                  <p className="text-gray-400">Crie um canal primeiro na página de treinamento</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {channels.map((channel) => (
+                    <button
+                      key={channel.id}
+                      onClick={() => handleChannelSelect(channel.id)}
+                      className={`w-full p-4 rounded-xl border transition-all duration-200 text-left ${
+                        selectedChannelId === channel.id
+                          ? 'bg-orange-900/30 border-orange-500 text-orange-400'
+                          : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-gray-600'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          selectedChannelId === channel.id ? 'bg-orange-500' : 'bg-gray-600'
+                        }`}>
+                          <Video className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{channel.nome_canal}</h3>
+                          <p className="text-xs text-gray-400">
+                            {channel.media_chars ? `${channel.media_chars} chars médios` : 'Sem configuração de caracteres'}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Script Generation Form */}
+            {selectedChannel && (
+              <div className="bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800 p-8">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-light text-white mb-2">Gerar Roteiro</h2>
+                  <p className="text-gray-400 text-sm">Configure os parâmetros para gerar seu roteiro</p>
+                </div>
+                
+                <div className="space-y-6">
+                  {/* Script Idea */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">
+                      Ideia do Roteiro
+                    </label>
+                    <textarea
+                      value={scriptIdea}
+                      onChange={(e) => setScriptIdea(e.target.value)}
+                      placeholder="Descreva a ideia principal do seu roteiro..."
+                      className="w-full h-24 p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 resize-none"
+                    />
+                  </div>
+
+                  {/* Model and Language */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-300">
+                        Modelo de IA
+                      </label>
+                      <select
+                        value={selectedModel}
+                        onChange={(e) => setSelectedModel(e.target.value)}
+                        className="w-full p-3 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white"
+                      >
+                        {modelOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-300">
+                        Idioma
+                      </label>
+                      <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="w-full p-3 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white"
+                      >
+                        <option value="Português">Português</option>
+                        <option value="Inglês">Inglês</option>
+                        <option value="Espanhol">Espanhol</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Generate Button */}
+                  <button
+                    onClick={generateScript}
+                    disabled={!scriptIdea.trim() || isGenerating}
+                    className={`
+                      w-full flex items-center justify-center space-x-3 py-4 rounded-xl font-medium transition-all duration-300 transform
+                      ${!scriptIdea.trim() || isGenerating
+                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
+                        : 'bg-orange-600 text-white hover:bg-orange-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
+                      }
+                    `}
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Gerando Roteiro...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="w-5 h-5" />
+                        <span>Gerar Roteiro</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column - Generated Content */}
+          <div className="space-y-8">
+            {/* Generated Script */}
+            {generatedScript && (
+              <div className="bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800 p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-light text-white mb-2">Roteiro Gerado</h2>
+                    <p className="text-gray-400 text-sm">
+                      {scriptCharCount > 0 ? `${scriptCharCount.toLocaleString()} caracteres` : 'Edite conforme necessário'}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={copyScriptToClipboard}
+                      className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+                      title="Copiar roteiro"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={downloadScript}
+                      className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+                      title="Download roteiro"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                
+                <textarea
+                  value={editedScript}
+                  onChange={(e) => setEditedScript(e.target.value)}
+                  className="w-full h-80 p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 text-sm resize-none"
+                  placeholder="Seu roteiro aparecerá aqui..."
+                />
+                
+                <div className="text-xs text-gray-400 mt-2">
+                  {editedScript.length.toLocaleString()} caracteres
+                </div>
+              </div>
+            )}
+
+            {/* Audio Generation */}
+            {editedScript && (
+              <div className="bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800 p-8">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-light text-white mb-2">Gerar Áudio</h2>
+                  <p className="text-gray-400 text-sm">Configure a voz e velocidade para gerar o áudio</p>
+                </div>
+
+                {/* Audio Message Display */}
+                {audioMessage && (
+                  <div className={`mb-6 p-4 rounded-xl text-center border ${
+                    audioMessage.type === 'success' 
+                      ? 'bg-green-900/20 text-green-400 border-green-800' 
+                      : 'bg-red-900/20 text-red-400 border-red-800'
+                  }`}>
+                    <span className="font-medium">{audioMessage.text}</span>
+                  </div>
+                )}
+                
+                <div className="space-y-6">
+                  {/* Voice Selection */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">
+                      Voz para Áudio
+                    </label>
+                    {isLoadingVoices ? (
+                      <div className="flex items-center space-x-2 p-3 bg-gray-800 border border-gray-600 rounded-xl">
+                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                        <span className="text-gray-400 text-sm">Carregando vozes...</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <select
+                          value={selectedVoiceForAudio || ''}
+                          onChange={(e) => setSelectedVoiceForAudio(e.target.value ? parseInt(e.target.value) : null)}
+                          className="w-full p-3 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white"
+                        >
+                          <option value="">Selecione uma voz</option>
+                          {voices.map((voice) => (
+                            <option key={voice.id} value={voice.id}>
+                              {voice.nome_voz} - {voice.plataforma}
+                            </option>
+                          ))}
+                        </select>
+                        
+                        {/* Voice Test Button */}
+                        {selectedVoiceForAudio && (
+                          <button
+                            onClick={testSelectedVoice}
+                            disabled={selectedVoiceForAudio ? testingVoices.has(selectedVoiceForAudio) : false}
+                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                              selectedVoiceForAudio && testingVoices.has(selectedVoiceForAudio)
+                                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                : isAudioPlaying(`voice-test-${selectedVoiceForAudio}`)
+                                ? 'bg-red-600 hover:bg-red-700 text-white'
+                                : 'bg-green-600 hover:bg-green-700 text-white'
+                            }`}
+                          >
+                            {selectedVoiceForAudio && testingVoices.has(selectedVoiceForAudio) ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Carregando...</span>
+                              </>
+                            ) : isAudioPlaying(`voice-test-${selectedVoiceForAudio}`) ? (
+                              <>
+                                <Square className="w-4 h-4" />
+                                <span>Parar</span>
+                              </>
+                            ) : (
+                              <>
+                                <Play className="w-4 h-4" />
+                                <span>Testar Voz</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Audio Speed */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">
+                      Velocidade do Áudio: {audioSpeed}x
+                    </label>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2.0"
+                      step="0.1"
+                      value={audioSpeed}
+                      onChange={(e) => setAudioSpeed(parseFloat(e.target.value))}
+                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                    />
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span>0.5x</span>
+                      <span>1.0x</span>
+                      <span>2.0x</span>
+                    </div>
+                  </div>
+
+                  {/* Generate Audio Button */}
+                  <button
+                    onClick={generateAudio}
+                    disabled={!selectedVoiceForAudio || isGeneratingAudio}
+                    className={`
+                      w-full flex items-center justify-center space-x-3 py-4 rounded-xl font-medium transition-all duration-300 transform
+                      ${!selectedVoiceForAudio || isGeneratingAudio
+                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
+                        : 'bg-green-600 text-white hover:bg-green-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
+                      }
+                    `}
+                  >
+                    {isGeneratingAudio ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Gerando Áudio...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-5 h-5" />
+                        <span>Gerar Áudio</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Generated Audio Player */}
+                  {generatedAudioUrl && (
+                    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-medium text-white">Áudio Gerado</h3>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={playGeneratedAudio}
+                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                              isPlayingGeneratedAudio
+                                ? 'bg-red-600 hover:bg-red-700 text-white'
+                                : 'bg-green-600 hover:bg-green-700 text-white'
+                            }`}
+                          >
+                            {isPlayingGeneratedAudio ? (
+                              <>
+                                <Square className="w-4 h-4" />
+                                <span>Parar</span>
+                              </>
+                            ) : (
+                              <>
+                                <Play className="w-4 h-4" />
+                                <span>Reproduzir</span>
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={downloadGeneratedAudio}
+                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span>Download</span>
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Audio Element for native controls */}
+                      <audio
+                        controls
+                        src={generatedAudioUrl}
+                        className="w-full"
+                        preload="metadata"
+                      >
+                        Seu navegador não suporta o elemento de áudio.
+                      </audio>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Settings Modal */}
+      {showSettingsModal && selectedChannel && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-50"
+          onClick={closeSettingsModal}
+        >
+          <div 
+            className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-700 flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
+                  <Settings className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-medium text-white">Configurações do Canal</h2>
+                  <p className="text-sm text-gray-400">{selectedChannel.nome_canal}</p>
+                </div>
+              </div>
+              <button
+                onClick={closeSettingsModal}
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+              {/* Modal Message */}
+              {modalMessage && (
+                <div className={`p-4 rounded-xl text-center border ${
+                  modalMessage.type === 'success' 
+                    ? 'bg-green-900/20 text-green-400 border-green-800' 
+                    : 'bg-red-900/20 text-red-400 border-red-800'
+                }`}>
+                  <div className="flex items-center justify-center space-x-2">
+                    {modalMessage.type === 'success' ? (
+                      <CheckCircle className="w-5 h-5" />
+                    ) : (
+                      <X className="w-5 h-5" />
+                    )}
+                    <span className="font-medium">{modalMessage.text}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Prompt Content */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  Prompt do Canal
+                </label>
+                <textarea
+                  value={editedPrompt}
+                  onChange={(e) => setEditedPrompt(e.target.value)}
+                  className="w-full h-40 p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 text-sm font-mono resize-none"
+                  placeholder="Prompt do canal..."
+                />
+                <div className="text-xs text-gray-400">
+                  {editedPrompt.length.toLocaleString()} caracteres
+                </div>
+              </div>
+
+              {/* Voice and Media Characters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Voice Preference */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Voz Preferida
+                  </label>
+                  {isLoadingVoices ? (
+                    <div className="flex items-center space-x-2 p-3 bg-gray-800 border border-gray-600 rounded-xl">
+                      <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                      <span className="text-gray-400 text-sm">Carregando vozes...</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <select
+                        value={selectedVoiceId || ''}
+                        onChange={(e) => setSelectedVoiceId(e.target.value ? parseInt(e.target.value) : null)}
+                        className="w-full p-3 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white"
+                      >
+                        <option value="">Selecione uma voz</option>
+                        {voices.map((voice) => (
+                          <option key={voice.id} value={voice.id}>
+                            {voice.nome_voz} - {voice.plataforma}
+                          </option>
+                        ))}
+                      </select>
+                      
+                      {/* Voice Preview Button */}
+                      {selectedVoiceId && (
+                        <button
+                          onClick={playSelectedVoicePreview}
+                          disabled={selectedVoiceId ? testingVoices.has(selectedVoiceId) : false}
+                          className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                            selectedVoiceId && testingVoices.has(selectedVoiceId)
+                              ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                              : isAudioPlaying(`voice-preview-${selectedVoiceId}`)
+                              ? 'bg-red-600 hover:bg-red-700 text-white'
+                              : 'bg-green-600 hover:bg-green-700 text-white'
+                          }`}
+                        >
+                          {selectedVoiceId && testingVoices.has(selectedVoiceId) ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Carregando...</span>
+                            </>
+                          ) : isAudioPlaying(`voice-preview-${selectedVoiceId}`) ? (
+                            <>
+                              <Square className="w-4 h-4" />
+                              <span>Parar</span>
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-4 h-4" />
+                              <span>Testar</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Media Characters */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Média de Caracteres
+                  </label>
+                  <input
+                    type="number"
+                    value={mediaChars}
+                    onChange={(e) => setMediaChars(e.target.value)}
+                    placeholder="Ex: 1500"
+                    min="0"
+                    step="1"
+                    className="w-full p-3 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
+                  />
+                  <div className="text-xs text-gray-400">
+                    Número médio de caracteres dos roteiros
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-700 flex-shrink-0">
+              <button
+                onClick={closeSettingsModal}
+                className="px-6 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={updateChannelSettings}
+                disabled={isUpdatingSettings}
+                className={`
+                  flex items-center space-x-2 px-6 py-2 rounded-lg font-medium transition-all duration-200
+                  ${isUpdatingSettings
+                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                    : 'bg-orange-600 hover:bg-orange-700 text-white'
+                  }
+                `}
+              >
+                {isUpdatingSettings ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Salvando...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Salvar Configurações</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default ScriptGenerationPage;
