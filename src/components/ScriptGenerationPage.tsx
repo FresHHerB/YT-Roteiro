@@ -251,8 +251,8 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   };
 
   const generateScript = async () => {
-    if (!selectedChannelId || !scriptIdea.trim() || !language.trim()) {
-      setMessage({ type: 'error', text: 'Selecione um canal, digite uma ideia para o roteiro e especifique o idioma.' });
+    if (!selectedChannelId || !scriptIdea.trim() || !language.trim() || !selectedModel.trim()) {
+      setMessage({ type: 'error', text: 'Selecione um canal, digite uma ideia para o roteiro, especifique o idioma e escolha um modelo.' });
       return;
     }
 
@@ -269,10 +269,11 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
       console.log('🚀 Iniciando geração de roteiro...');
       
       const payload = {
-        nomeCanal: selectedChannel.nome_canal,
-        ideiaRoteiro: scriptIdea,
-        promptRoteiro: selectedChannel.prompt_roteiro,
-        idioma: language
+        id_canal: selectedChannelId,
+        nome_canal: selectedChannel.nome_canal,
+        ideia_roteiro: scriptIdea,
+        idioma: language,
+        modelo: selectedModel
       };
 
       console.log('📤 Payload enviado:', payload);
