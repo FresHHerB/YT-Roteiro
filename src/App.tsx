@@ -98,6 +98,7 @@ function App() {
           <TrainingPage 
             user={user} 
             onBack={() => setCurrentPage('dashboard')}
+            onNavigate={navigateToPage}
           />
         );
       case 'prompts':
@@ -105,6 +106,7 @@ function App() {
           <PromptManagementPage 
             user={user} 
             onBack={() => setCurrentPage('dashboard')}
+            onNavigate={navigateToPage}
           />
         );
       case 'settings':
@@ -112,6 +114,7 @@ function App() {
           <SettingsPage 
             user={user} 
             onBack={() => setCurrentPage('dashboard')}
+            onNavigate={navigateToPage}
           />
         );
       case 'generate':
@@ -120,6 +123,7 @@ function App() {
           <ScriptGenerationPage 
             user={user} 
             onBack={() => setCurrentPage('dashboard')}
+            onNavigate={navigateToPage}
           />
         );
       default:
