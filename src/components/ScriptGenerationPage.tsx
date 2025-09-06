@@ -53,7 +53,6 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   const [audioSpeed, setAudioSpeed] = useState(1.0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  
   const [isLoadingChannels, setIsLoadingChannels] = useState(true);
   const [isLoadingVoices, setIsLoadingVoices] = useState(true);
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
