@@ -272,11 +272,6 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         ideiaRoteiro: scriptIdea,
         promptRoteiro: selectedChannel.prompt_roteiro,
         idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
       };
 
       console.log('📤 Payload enviado:', payload);
