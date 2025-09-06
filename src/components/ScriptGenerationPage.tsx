@@ -620,4 +620,27 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
     
     const audioId = `voice-preview-${selectedVoiceId}`;
     
-    if (isA
+    if (isAudioPlaying(audioId)) {
+      pauseAudio();
+      return;
+    }
+
+    setTestingVoices(prev => new Set(prev).add(selectedVoiceId));
+    setVoiceTestError('');
+
+    generateVoiceTest(selectedVoiceId)
+      .then(audioUrl => {
+        playAudio(audioUrl, audioId);
+      })
+      .catch(error => {
+        console.error('Erro no teste de voz:', error);
+        setModalMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao testar voz' });
+      })
+      .finally(() => {
+        setTestingVoices(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(selectedVoiceId);
+          return newSet;
+        });
+      });
+  };
