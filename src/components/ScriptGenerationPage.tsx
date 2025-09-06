@@ -347,6 +347,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
       // Log do tipo de conteúdo da resposta
       const contentType = response.headers.get('content-type');
       console.log('📄 Content-Type da resposta:', contentType);
+      
       if (response.ok) {
         // Tentar ler como texto primeiro para ver o formato
         const responseText = await response.text();
