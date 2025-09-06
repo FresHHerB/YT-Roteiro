@@ -39,6 +39,12 @@ interface Voice {
   created_at: string;
 }
 
+interface GeneratedAudio {
+  url: string;
+  filename: string;
+  blob?: Blob;
+}
+
 interface ScriptGenerationPageProps {
   user: any;
   onBack: () => void;
@@ -344,77 +350,96 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
 
       console.log('📡 Response status:', response.status);
       console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
-      console.log('📄 Content-Type da resposta:', response.headers.get('content-type'));
-
-      // Verificar se a resposta é áudio binário
+      // Log do tipo de conteúdo da resposta
       const contentType = response.headers.get('content-type');
+      console.log('📄 Content-Type da resposta:', contentType);
       
-      if (contentType === 'binary/octet-stream' || contentType?.startsWith('audio/')) {
-        console.log('🎵 Resposta é áudio binário, criando blob...');
-        
-        // Criar blob do áudio
-        const audioBlob = await response.blob();
-        console.log('📦 Blob criado, tamanho:', audioBlob.size, 'bytes');
-        
-        // Criar URL temporária para o blob
-        const audioUrl = URL.createObjectURL(audioBlob);
-        console.log('🔗 URL do blob criada:', audioUrl);
-        
-        // Definir estado do áudio
-        setGeneratedAudio({
-          url: audioUrl,
-          filename: `audio-${Date.now()}.mp3`,
-          blob: audioBlob
-        });
-        
-        setAudioMessage({ type: 'success', text: 'Áudio gerado com sucesso!' });
-        console.log('✅ Áudio processado e definido no estado');
-        
-      } else {
-        // Tentar processar como JSON (caso futuro)
-        console.log('📄 Tentando processar como JSON...');
-        
+      if (response.ok) {
+        // Tentar ler como texto primeiro para ver o formato
+        const responseText = await response.text();
+        console.log('📝 Response como texto:', responseText);
+        let result;
         try {
-          const responseText = await response.text();
-          console.log('📝 Response como texto:', responseText.substring(0, 100) + '...');
-          
-          const result = JSON.parse(responseText);
+          result = JSON.parse(responseText);
           console.log('✅ Response parseado como JSON:', result);
-          console.log('🔍 Estrutura completa da resposta:', JSON.stringify(result, null, 2));
-          
-          // Tentar extrair URL do áudio de diferentes formas
-          let audioUrl = null;
-          
-          if (Array.isArray(result)) {
-            console.log('📋 Response é um array com', result.length, 'itens');
-            if (result[0]) {
-              audioUrl = result[0].response || result[0].url || result[0].audio_url;
-              console.log('🎵 URL extraída do primeiro item do array:', audioUrl);
-            }
-          } else if (typeof result === 'object') {
-            console.log('📦 Response é um objeto');
-            audioUrl = result.response || result.url || result.audio_url;
-            console.log('🎵 URL extraída do objeto:', audioUrl);
-          }
-          
-          if (audioUrl) {
-            setGeneratedAudio({
-              url: audioUrl,
-              filename: `audio-${Date.now()}.mp3`
-            });
-            setAudioMessage({ type: 'success', text: 'Áudio gerado com sucesso!' });
-            console.log('✅ URL do áudio definida:', audioUrl);
-          } else {
-            console.log('❌ Nenhuma URL de áudio encontrada na resposta');
-            throw new Error('URL do áudio não encontrada na resposta');
-          }
-          
         } catch (parseError) {
-          console.log('❌ Erro ao processar resposta:', parseError);
-          throw new Error('Erro ao processar resposta do servidor');
+          console.error('❌ Erro ao fazer parse JSON:', parseError);
+          console.log('🔍 Tentando processar como resposta binária...');
+          
+          // Se não é JSON, pode ser o arquivo binário direto
+          if (contentType && contentType.includes('audio')) {
+            console.log('🎵 Resposta parece ser áudio direto');
+            const blob = new Blob([responseText], { type: contentType });
+            const audioUrl = URL.createObjectURL(blob);
+            setGeneratedAudioUrl(audioUrl);
+            setAudioMessage({ type: 'success', text: 'Áudio gerado com sucesso!' });
+            return;
+          }
+          
+          throw new Error('Resposta não é JSON válido nem áudio direto');
         }
+          
+        // Processar resposta JSON
+        console.log('🔍 Analisando estrutura da resposta JSON...');
+        console.log('🔍 Tipo da resposta:', typeof result);
+        console.log('🔍 É array?', Array.isArray(result));
+        
+        if (Array.isArray(result)) {
+          console.log('📋 Array com', result.length, 'elementos');
+          result.forEach((item, index) => {
+            console.log(`📋 Item ${index}:`, item);
+          });
+        } else {
+          console.log('📋 Objeto:', result);
+        }
+        
+        // Tentar extrair URL do áudio de diferentes formatos possíveis
+        let audioUrl = null;
+        
+        if (Array.isArray(result) && result.length > 0) {
+          console.log('🎯 Processando como array...');
+          const firstItem = result[0];
+          console.log('🎯 Primeiro item:', firstItem);
+          
+          // Verificar diferentes possíveis campos
+          if (firstItem.response) {
+            audioUrl = firstItem.response;
+            console.log('✅ URL encontrada em result[0].response:', audioUrl);
+          } else if (firstItem.url) {
+            audioUrl = firstItem.url;
+            console.log('✅ URL encontrada em result[0].url:', audioUrl);
+          } else if (firstItem.audio_url) {
+            audioUrl = firstItem.audio_url;
+            console.log('✅ URL encontrada em result[0].audio_url:', audioUrl);
+          }
+        } else if (result && typeof result === 'object') {
+          console.log('🎯 Processando como objeto...');
+          if (result.response) {
+            audioUrl = result.response;
+            console.log('✅ URL encontrada em result.response:', audioUrl);
+          } else if (result.url) {
+            audioUrl = result.url;
+            console.log('✅ URL encontrada em result.url:', audioUrl);
+          } else if (result.audio_url) {
+            audioUrl = result.audio_url;
+            console.log('✅ URL encontrada em result.audio_url:', audioUrl);
+          }
+        }
+        
+        if (audioUrl) {
+          console.log('🎵 URL do áudio extraída:', audioUrl);
+          setGeneratedAudioUrl(audioUrl);
+          setAudioMessage({ type: 'success', text: 'Áudio gerado com sucesso!' });
+        } else {
+          console.error('❌ URL do áudio não encontrada na resposta');
+          console.error('❌ Estrutura completa da resposta:', JSON.stringify(result, null, 2));
+          throw new Error('URL do áudio não encontrada na resposta');
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('Erro HTTP:', response.status, errorText);
+        throw new Error('Falha na geração do áudio');
       }
-      
     } catch (error) {
       console.error('💥 Erro completo na geração de áudio:', error);
       setAudioMessage({ type: 'error', text: 'Erro ao gerar áudio. Tente novamente.' });
