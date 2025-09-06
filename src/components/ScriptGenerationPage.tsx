@@ -431,7 +431,6 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         console.error('❌ Estrutura completa da resposta:', JSON.stringify(result, null, 2));
         throw new Error('Falha na geração do áudio');
       }
-    
     } catch (error) {
       console.error('Erro completo:', error);
       console.error('💥 Erro completo na geração de áudio:', error);
