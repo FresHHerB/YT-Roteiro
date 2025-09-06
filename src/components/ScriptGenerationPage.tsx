@@ -49,28 +49,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   const [selectedVoiceId, setSelectedVoiceId] = useState<number | null>(null);
   const [scriptIdea, setScriptIdea] = useState('');
   const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
-  const [language, setLanguage] = useState('');
+  const [selectedModel, setSelectedModel] = useState('');
   const [generatedScript, setGeneratedScript] = useState('');
   const [audioSpeed, setAudioSpeed] = useState(1.0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -273,8 +252,8 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   };
 
   const generateScript = async () => {
-    if (!selectedChannelId || !scriptIdea.trim() || !language.trim()) {
-      setMessage({ type: 'error', text: 'Selecione um canal, digite uma ideia para o roteiro e especifique o idioma.' });
+    if (!selectedChannelId || !scriptIdea.trim() || !language.trim() || !selectedModel.trim()) {
+      setMessage({ type: 'error', text: 'Selecione um canal, digite uma ideia para o roteiro, especifique o idioma e escolha um modelo.' });
       return;
     }
 
@@ -291,32 +270,11 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
       console.log('🚀 Iniciando geração de roteiro...');
       
       const payload = {
-        nomeCanal: selectedChannel.nome_canal,
-        ideiaRoteiro: scriptIdea,
-        promptRoteiro: selectedChannel.prompt_roteiro,
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
-        idioma: language
+        id_canal: selectedChannelId,
+        nome_canal: selectedChannel.nome_canal,
+        ideia_roteiro: scriptIdea,
+        idioma: language,
+        modelo: selectedModel
       };
 
       console.log('📤 Payload enviado:', payload);
@@ -402,11 +360,9 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         if (contentType.includes('binary/octet-stream') || contentType.includes('audio/')) {
           console.log('🎵 Resposta é áudio binário, processando...');
           
-          // Para logs de debug, clone a response e leia como texto (apenas primeiros caracteres)
           const debugText = await response.clone().text();
           console.log('📝 Response como texto (primeiros 200 chars):', debugText.substring(0, 200));
           
-          // Processar o áudio binário corretamente
           const arrayBuffer = await response.arrayBuffer();
           console.log('📦 ArrayBuffer obtido, tamanho:', arrayBuffer.byteLength, 'bytes');
           
@@ -422,7 +378,6 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
           
           setMessage({ type: 'success', text: 'Áudio gerado com sucesso!' });
         } else {
-          // Resposta JSON (para compatibilidade futura)
           const result = await response.json();
           console.log('✅ Resposta JSON recebida:', result);
           
@@ -448,7 +403,6 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
 
   const downloadAudio = () => {
     if (audioBlob) {
-      // Download direto do blob
       const url = URL.createObjectURL(audioBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -458,7 +412,6 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } else if (audioUrl) {
-      // Download da URL externa
       const a = document.createElement('a');
       a.href = audioUrl;
       a.download = `roteiro-audio-${Date.now()}.mp3`;
@@ -641,292 +594,6 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Idioma
-                </label>
-                <input
-                  type="text"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  placeholder="Ex: Português, Inglês, Espanhol..."
-                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
                   Ideia do Roteiro
                 </label>
                 <textarea
@@ -937,16 +604,33 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  Modelo de IA
+                </label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all duration-200 text-white"
+                >
+                  <option value="">Selecione um modelo</option>
+                  <option value="GPT-5">GPT-5</option>
+                  <option value="GPT-4.1-mini">GPT-4.1-mini</option>
+                  <option value="Sonnet-4">Sonnet-4</option>
+                  <option value="Gemini-2.5-Pro">Gemini-2.5-Pro</option>
+                  <option value="Gemini-2.5-Flash">Gemini-2.5-Flash</option>
+                </select>
+              </div>
+
               <div className="flex justify-center">
                 <button
                   onClick={generateScript}
-                  disabled={!selectedChannelId || !scriptIdea.trim() || !language.trim() || isGeneratingScript}
+                  disabled={!selectedChannelId || !scriptIdea.trim() || !language.trim() || !selectedModel.trim() || isGeneratingScript}
                   className={`
                     flex items-center space-x-3 px-8 py-4 rounded-xl font-medium transition-all duration-300 transform
-                    ${!selectedChannelId || !scriptIdea.trim() || !language.trim() || isGeneratingScript
+                    ${!selectedChannelId || !scriptIdea.trim() || !language.trim() || !selectedModel.trim() || isGeneratingScript
                       ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
                       : 'bg-orange-600 text-white hover:bg-orange-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
-                  disabled={!selectedChannelId || !scriptIdea.trim() || !selectedModel.trim() || isGeneratingScript}
                     }
                   `}
                 >
@@ -1093,7 +777,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                   disabled={!generatedScript.trim() || !selectedVoiceId || isGeneratingAudio}
                   className={`
                     flex items-center space-x-3 px-8 py-4 rounded-xl font-medium transition-all duration-300 transform
-                    ${!selectedChannelId || !scriptIdea.trim() || !language.trim() || !selectedModel.trim() || isGeneratingScript
+                    ${!generatedScript.trim() || !selectedVoiceId || isGeneratingAudio
                       ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
                       : 'bg-purple-600 text-white hover:bg-purple-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
                     }
