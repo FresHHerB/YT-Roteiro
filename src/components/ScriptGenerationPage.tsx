@@ -353,8 +353,6 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
       // Tentar ler como texto primeiro para ver o formato
       const responseText = await response.text();
       console.log('📝 Response como texto:', responseText);
-        const result = await response.json();
-      // Tentar fazer parse como JSON
       let result;
       try {
         result = JSON.parse(responseText);
@@ -578,10 +576,6 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         return sampleAudioUrl;
       }
 
-      throw new Error('Plataforma não suportada para teste');
-    } catch (error) {
-      throw error;
-    }
   };
 
   const testSelectedVoice = () => {
