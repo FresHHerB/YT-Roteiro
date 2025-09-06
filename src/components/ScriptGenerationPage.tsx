@@ -891,7 +891,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                       : 'bg-orange-600 text-white hover:bg-orange-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
                   disabled={!selectedChannelId || !scriptIdea.trim() || !selectedModel.trim() || isGeneratingScript}
                     }
-                  `}
+                  }
                 >
                   {isGeneratingScript ? (
                     <>
