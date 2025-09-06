@@ -17,6 +17,7 @@ import {
   Settings
 } from 'lucide-react';
 import { PageType } from '../App';
+import { PageType } from '../App';
 
 interface Channel {
   id: number;
