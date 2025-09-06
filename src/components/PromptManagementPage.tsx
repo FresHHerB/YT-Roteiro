@@ -16,6 +16,7 @@ import {
   Mic,
   Settings
 } from 'lucide-react';
+import { PageType } from '../App';
 
 interface Channel {
   id: number;
@@ -41,9 +42,10 @@ interface Voice {
 interface PromptManagementPageProps {
   user: any;
   onBack: () => void;
+  onNavigate?: (page: PageType) => void;
 }
 
-const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBack }) => {
+const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBack, onNavigate }) => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [voices, setVoices] = useState<Voice[]>([]);
   const [isLoadingChannels, setIsLoadingChannels] = useState(true);

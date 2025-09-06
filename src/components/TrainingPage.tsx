@@ -18,13 +18,15 @@ import {
   Settings
 } from 'lucide-react';
 import { ScriptData, TrainingData } from '../types';
+import { PageType } from '../App';
 
 interface TrainingPageProps {
   user: any;
   onBack: () => void;
+  onNavigate?: (page: PageType) => void;
 }
 
-const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack }) => {
+const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate }) => {
   const [trainingData, setTrainingData] = useState<TrainingData>({
     channelName: '',
     scripts: {
@@ -212,47 +214,15 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack }) => {
       {/* Header */}
       <div className="bg-black/50 backdrop-blur-xl border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-between w-full">
+            {/* Left Section: Back button + Page title */}
+            <div className="flex items-center space-x-4 flex-shrink-0">
               <button
                 onClick={onBack}
                 className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              
-              {/* Navigation Icons */}
-              <div className="flex items-center space-x-2 ml-4">
-                <button
-                  onClick={() => onBack()}
-                  className="p-2 text-blue-400 bg-blue-900/30 rounded-lg transition-all duration-200"
-                  title="Dashboard"
-                >
-                  <BookOpen className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => window.location.href = '#prompts'}
-                  className="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-900/30 rounded-lg transition-all duration-200"
-                  title="Revisar/Editar Conteúdo"
-                >
-                  <Edit3 className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => window.location.href = '#generate'}
-                  className="p-2 text-gray-400 hover:text-orange-400 hover:bg-orange-900/30 rounded-lg transition-all duration-200"
-                  title="Gerar Roteiro e Áudio"
-                >
-                  <Mic className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => window.location.href = '#settings'}
-                  className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all duration-200"
-                  title="Configurações Gerais"
-                >
-                  <Settings className="w-5 h-5" />
-                </button>
-              </div>
-              
               <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
                 <BookOpen className="w-6 h-6 text-white" />
               </div>
@@ -263,6 +233,60 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack }) => {
                 <p className="text-sm text-gray-400">
                   Analise e replique a estrutura de canais existentes
                 </p>
+              </div>
+            </div>
+            
+            {/* Center Section: Navigation Icons */}
+            <div className="flex items-center space-x-2 flex-1 justify-center max-w-md">
+              <button
+                onClick={() => onNavigate && onNavigate('training')}
+                className="p-2 text-blue-400 bg-blue-900/30 rounded-lg transition-all duration-200"
+                title="Treinar Canal"
+              >
+                <BookOpen className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => onNavigate && onNavigate('prompts')}
+                className="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-900/30 rounded-lg transition-all duration-200"
+                title="Revisar/Editar Conteúdo"
+              >
+                <Edit3 className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => onNavigate && onNavigate('generate')}
+                className="p-2 text-gray-400 hover:text-orange-400 hover:bg-orange-900/30 rounded-lg transition-all duration-200"
+                title="Gerar Roteiro e Áudio"
+              >
+                <Mic className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => onNavigate && onNavigate('settings')}
+                className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all duration-200"
+                title="Configurações Gerais"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Right Section: Settings + User info */}
+            <div className="flex items-center space-x-4 flex-shrink-0">
+              <button
+                onClick={() => onNavigate && onNavigate('settings')}
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+              
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">
+                    {user.email.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="hidden md:block">
+                  <div className="text-white text-sm font-medium">{user.email}</div>
+                  <div className="text-gray-400 text-xs">Admin</div>
+                </div>
               </div>
             </div>
           </div>
