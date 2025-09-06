@@ -431,6 +431,53 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         console.error('❌ Estrutura completa da resposta:', JSON.stringify(result, null, 2));
         throw new Error('Falha na geração do áudio');
       }
+
+      // Log da resposta HTTP
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('📡 Response content-type:', response.headers.get('content-type'));
+
+      // Obter resposta como texto primeiro
+      const responseText = await response.text();
+      console.log('📄 Response como texto:', responseText);
+
+      // Tentar fazer parse como JSON
+      let result;
+      try {
+        result = JSON.parse(responseText);
+        console.log('✅ Response parseado como JSON:', result);
+      } catch (parseError) {
+        console.log('❌ Erro ao fazer parse JSON:', parseError);
+        console.log('📄 Response text que falhou no parse:', responseText);
+        throw new Error('Resposta não é um JSON válido');
+      }
+
+      console.log('🔍 Estrutura completa da resposta:', JSON.stringify(result, null, 2));
+
+      // Tentar extrair URL do áudio de diferentes formas
+      let audioUrl = null;
+      
+      if (Array.isArray(result) && result.length > 0) {
+        console.log('📋 Resposta é um array, primeiro item:', result[0]);
+        audioUrl = result[0].response || result[0].url || result[0].audio_url;
+      } else if (result && typeof result === 'object') {
+        console.log('📦 Resposta é um objeto:', result);
+        audioUrl = result.response || result.url || result.audio_url;
+      }
+
+      console.log('🎵 URL do áudio extraída:', audioUrl);
+
+      if (!audioUrl) {
+        console.error('❌ Nenhuma URL de áudio encontrada na resposta');
+        console.log('🔍 Campos disponíveis:', Object.keys(result));
+        throw new Error('URL do áudio não encontrada na resposta');
+      }
+
+      // Sucesso - definir URL do áudio gerado
+      setGeneratedAudioUrl(audioUrl);
+      setAudioMessage({ type: 'success', text: 'Áudio gerado com sucesso!' });
+      console.log('✅ Áudio gerado com sucesso! URL:', audioUrl);
+
     } catch (error) {
       console.error('Erro completo:', error);
       console.error('💥 Erro completo na geração de áudio:', error);
