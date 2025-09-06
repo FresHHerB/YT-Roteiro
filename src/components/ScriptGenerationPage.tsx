@@ -656,13 +656,13 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                 {/* Speed Control */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-300 text-center">
-                    Velocidade: {audioSpeed}x
+                    Velocidade: {audioSpeed.toFixed(1)}x
                   </label>
                   <div className="flex justify-center">
                     <input
                       type="range"
-                      min="0.5"
-                      max="2.0"
+                      min="0.7"
+                      max="1.2"
                       step="0.1"
                       value={audioSpeed}
                       onChange={(e) => setAudioSpeed(parseFloat(e.target.value))}
@@ -670,9 +670,9 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                     />
                   </div>
                   <div className="flex justify-between text-xs text-gray-400 max-w-64 mx-auto">
-                    <span>0.5x</span>
+                    <span>0.7x</span>
                     <span>1.0x</span>
-                    <span>2.0x</span>
+                    <span>1.2x</span>
                   </div>
                 </div>
               </div>
