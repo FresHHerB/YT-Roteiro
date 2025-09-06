@@ -42,9 +42,10 @@ interface Voice {
 interface SettingsPageProps {
   user: any;
   onBack: () => void;
+  onNavigate?: (page: string) => void;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ user, onBack, onNavigate }) => {
   const [apis, setApis] = useState<API[]>([]);
   const [voices, setVoices] = useState<Voice[]>([]);
   const [filteredVoices, setFilteredVoices] = useState<Voice[]>([]);
