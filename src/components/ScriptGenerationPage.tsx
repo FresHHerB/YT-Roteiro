@@ -39,12 +39,6 @@ interface Voice {
   created_at: string;
 }
 
-interface GeneratedAudio {
-  url: string;
-  filename: string;
-  blob?: Blob;
-}
-
 interface ScriptGenerationPageProps {
   user: any;
   onBack: () => void;
