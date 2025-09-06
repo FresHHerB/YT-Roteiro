@@ -93,8 +93,6 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ user, onLogout, onNavigat
               
               <nav className="hidden md:flex items-center space-x-6">
                 <button className="text-white font-medium">Dashboard</button>
-                <button className="text-gray-400 hover:text-white transition-colors">Projects</button>
-                <button className="text-gray-400 hover:text-white transition-colors">Analytics</button>
               </nav>
             </div>
 

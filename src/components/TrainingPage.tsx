@@ -12,7 +12,10 @@ import {
   Sparkles,
   CheckCircle,
   Copy,
-  Download
+  Download,
+  Edit3,
+  Mic,
+  Settings
 } from 'lucide-react';
 import { ScriptData, TrainingData } from '../types';
 
@@ -217,6 +220,39 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack }) => {
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
+              
+              {/* Navigation Icons */}
+              <div className="flex items-center space-x-2 ml-4">
+                <button
+                  onClick={() => onBack()}
+                  className="p-2 text-blue-400 bg-blue-900/30 rounded-lg transition-all duration-200"
+                  title="Dashboard"
+                >
+                  <BookOpen className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => window.location.href = '#prompts'}
+                  className="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-900/30 rounded-lg transition-all duration-200"
+                  title="Revisar/Editar Conteúdo"
+                >
+                  <Edit3 className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => window.location.href = '#generate'}
+                  className="p-2 text-gray-400 hover:text-orange-400 hover:bg-orange-900/30 rounded-lg transition-all duration-200"
+                  title="Gerar Roteiro e Áudio"
+                >
+                  <Mic className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => window.location.href = '#settings'}
+                  className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all duration-200"
+                  title="Configurações Gerais"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+              </div>
+              
               <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
                 <BookOpen className="w-6 h-6 text-white" />
               </div>

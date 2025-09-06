@@ -9,7 +9,10 @@ import {
   Download,
   Mic,
   RefreshCw,
-  Volume2
+  Volume2,
+  BookOpen,
+  Edit3,
+  Settings
 } from 'lucide-react';
 
 interface Channel {
@@ -446,6 +449,39 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
+              
+              {/* Navigation Icons */}
+              <div className="flex items-center space-x-2 ml-4">
+                <button
+                  onClick={() => window.location.href = '#training'}
+                  className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-900/30 rounded-lg transition-all duration-200"
+                  title="Treinar Canal"
+                >
+                  <BookOpen className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => window.location.href = '#prompts'}
+                  className="p-2 text-gray-400 hover:text-purple-400 hover:bg-purple-900/30 rounded-lg transition-all duration-200"
+                  title="Revisar/Editar Conteúdo"
+                >
+                  <Edit3 className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => onBack()}
+                  className="p-2 text-orange-400 bg-orange-900/30 rounded-lg transition-all duration-200"
+                  title="Gerar Roteiro e Áudio"
+                >
+                  <Mic className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => window.location.href = '#settings'}
+                  className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700 rounded-lg transition-all duration-200"
+                  title="Configurações Gerais"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+              </div>
+              
               <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
                 <Mic className="w-6 h-6 text-white" />
               </div>
