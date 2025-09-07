@@ -40,8 +40,13 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showPromptModal, setShowPromptModal] = useState(false);
-  const [promptData, setPromptData] = useState<{ channelName: string; content: string } | null>(null);
-  const [editedPrompt, setEditedPrompt] = useState('');
+  const [promptData, setPromptData] = useState<{ 
+    channelName: string; 
+    prompt_titulo: string; 
+    prompt_roteiro: string; 
+  } | null>(null);
+  const [editedTitlePrompt, setEditedTitlePrompt] = useState('');
+  const [editedScriptPrompt, setEditedScriptPrompt] = useState('');
   const [isUpdatingPrompt, setIsUpdatingPrompt] = useState(false);
   const [modalMessage, setModalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -122,10 +127,17 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
 
       if (response.ok) {
         const result = await response.json();
-        const promptOutput = result[0]?.output || 'Prompt gerado com sucesso!';
+        const responseData = result[0] || {};
+        const titlePrompt = responseData.prompt_titulo || 'Prompt de título não encontrado';
+        const scriptPrompt = responseData.prompt_roteiro || 'Prompt de roteiro não encontrado';
         
-        setPromptData({ channelName: trainingData.channelName, content: promptOutput });
-        setEditedPrompt(promptOutput);
+        setPromptData({ 
+          channelName: trainingData.channelName, 
+          prompt_titulo: titlePrompt,
+          prompt_roteiro: scriptPrompt
+        });
+        setEditedTitlePrompt(titlePrompt);
+        setEditedScriptPrompt(scriptPrompt);
         setShowPromptModal(true);
         setModalMessage(null);
         setMessage({ type: 'success', text: 'Treinamento enviado com sucesso!' });
@@ -158,7 +170,8 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
     try {
       const payload = {
         nome_canal: promptData.channelName,
-        prompt_atualizado: editedPrompt
+        prompt_titulo: editedTitlePrompt,
+        prompt_roteiro: editedScriptPrompt
       };
 
       const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook/updatePromptRoteiro', {
@@ -182,23 +195,25 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
   };
 
   const copyToClipboard = async () => {
-    if (editedPrompt) {
+    const combinedPrompts = `=== PROMPT DE TÍTULO ===\n${editedTitlePrompt}\n\n=== PROMPT DE ROTEIRO ===\n${editedScriptPrompt}`;
+    if (combinedPrompts) {
       try {
-        await navigator.clipboard.writeText(editedPrompt);
-        setModalMessage({ type: 'success', text: 'Prompt copiado para a área de transferência!' });
+        await navigator.clipboard.writeText(combinedPrompts);
+        setModalMessage({ type: 'success', text: 'Prompts copiados para a área de transferência!' });
       } catch (err) {
-        setModalMessage({ type: 'error', text: 'Erro ao copiar prompt.' });
+        setModalMessage({ type: 'error', text: 'Erro ao copiar prompts.' });
       }
     }
   };
 
   const downloadPrompt = () => {
-    if (editedPrompt) {
-      const blob = new Blob([editedPrompt], { type: 'text/plain' });
+    const combinedPrompts = `=== PROMPT DE TÍTULO ===\n${editedTitlePrompt}\n\n=== PROMPT DE ROTEIRO ===\n${editedScriptPrompt}`;
+    if (combinedPrompts) {
+      const blob = new Blob([combinedPrompts], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `prompt-${promptData?.channelName || 'roteiro'}-${new Date().toISOString().split('T')[0]}.txt`;
+      a.download = `prompts-${promptData?.channelName || 'roteiro'}-${new Date().toISOString().split('T')[0]}.txt`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -427,8 +442,8 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
                   <CheckCircle className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-light text-white">Prompt de Roteiro Gerado com Sucesso!</h2>
-                  <p className="text-green-400 text-sm">Edite e salve seu prompt personalizado</p>
+                  <h2 className="text-2xl font-light text-white">Prompts Gerados com Sucesso!</h2>
+                  <p className="text-green-400 text-sm">Edite e salve seus prompts personalizados</p>
                 </div>
               </div>
               <button
@@ -472,19 +487,44 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
                 />
               </div>
 
-              {/* Editable Prompt Content */}
-              <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-300">
-                  Conteúdo do Prompt
-                </label>
-                <textarea
-                  value={editedPrompt}
-                  onChange={(e) => setEditedPrompt(e.target.value)}
-                  className="w-full h-80 p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 text-sm font-mono resize-none"
-                  placeholder="Conteúdo do prompt..."
-                />
-                <div className="text-xs text-gray-400">
-                  {editedPrompt.length.toLocaleString()} caracteres
+              {/* Split Layout for Both Prompts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Title Prompt */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <label className="block text-sm font-medium text-gray-300">
+                      Prompt de Título
+                    </label>
+                  </div>
+                  <textarea
+                    value={editedTitlePrompt}
+                    onChange={(e) => setEditedTitlePrompt(e.target.value)}
+                    className="w-full h-64 p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 text-sm font-mono resize-none"
+                    placeholder="Prompt para geração de títulos..."
+                  />
+                  <div className="text-xs text-gray-400">
+                    {editedTitlePrompt.length.toLocaleString()} caracteres
+                  </div>
+                </div>
+
+                {/* Script Prompt */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                    <label className="block text-sm font-medium text-gray-300">
+                      Prompt de Roteiro
+                    </label>
+                  </div>
+                  <textarea
+                    value={editedScriptPrompt}
+                    onChange={(e) => setEditedScriptPrompt(e.target.value)}
+                    className="w-full h-64 p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 text-sm font-mono resize-none"
+                    placeholder="Prompt para geração de roteiros..."
+                  />
+                  <div className="text-xs text-gray-400">
+                    {editedScriptPrompt.length.toLocaleString()} caracteres
+                  </div>
                 </div>
               </div>
             </div>
@@ -534,7 +574,7 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
                   ) : (
                     <>
                       <CheckCircle className="w-4 h-4" />
-                      <span>Atualizar Prompt</span>
+                      <span>Atualizar Prompts</span>
                     </>
                   )}
                 </button>
