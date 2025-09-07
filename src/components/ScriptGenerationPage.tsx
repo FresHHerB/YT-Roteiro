@@ -1090,8 +1090,82 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                     const borderColor = borderColors[index % borderColors.length];
                     
                     return (
-                      <div key={channelGroup.id} className={`border-l-4 ${borderColor} bg-gray-800/50 rounded-r-xl p-6`}>
-                        <h3 className="text-lg font-medium text-white mb-4 flex items-center space-x-2">
+                      <div key={channelGroup.id} className={`border-l-4 ${borderColor} bg-gray-800/30 rounded-r-xl p-4`}>
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-medium text-white flex items-center space-x-2">
+                            <Video className="w-5 h-5" />
+                            <span>{channelGroup.nome_canal}</span>
+                          </h3>
+                          <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-1 rounded-full">
+                            {channelGroup.scripts.length} roteiro{channelGroup.scripts.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {channelGroup.scripts.map((script) => (
+                            <div 
+                              key={script.id} 
+                              className="bg-gray-700/40 rounded-lg p-3 hover:bg-gray-700/60 transition-all duration-200 cursor-pointer border border-gray-600/30 hover:border-gray-500/50 group relative"
+                              onClick={() => loadScript(script)}
+                            >
+                              {/* Delete Button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteScript(script.id);
+                                }}
+                                disabled={isDeletingScript === script.id}
+                                className={`absolute top-2 right-2 p-1.5 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 ${
+                                  isDeletingScript === script.id
+                                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-400 hover:text-red-400 hover:bg-red-900/30'
+                                }`}
+                              >
+                                {isDeletingScript === script.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3 h-3" />
+                                )}
+                              </button>
+
+                              {/* Script Content */}
+                              <div className="pr-8">
+                                {/* Date and Stats */}
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs text-gray-400">
+                                    {new Date(script.created_at).toLocaleDateString('pt-BR', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
+                                  <span className="text-xs text-gray-500 bg-gray-600/50 px-2 py-0.5 rounded">
+                                    {script.roteiro.length} chars
+                                  </span>
+                                </div>
+                                
+                                {/* Script Preview */}
+                                <p className="text-gray-300 text-xs leading-relaxed line-clamp-4 group-hover:text-white transition-colors">
+                                  {script.roteiro.substring(0, 120)}
+                                  {script.roteiro.length > 120 && '...'}
+                                </p>
+                                
+                                {/* Load Indicator */}
+                                <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className="flex items-center space-x-1 text-blue-400">
+                                    <Download className="w-3 h-3 rotate-180" />
+                                    <span className="text-xs">Clique para carregar</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
                           <Video className="w-5 h-5" />
                           <span>{channelGroup.nome_canal}</span>
                           <span className="text-sm text-gray-400">({channelGroup.scripts.length} roteiros)</span>
