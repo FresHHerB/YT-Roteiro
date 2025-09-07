@@ -774,7 +774,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                   </select>
                 </div>
 
-                {/* Voice Test Button */}
+              {/* Generate Button */}
                 {selectedVoiceId && (
                   <div className="flex justify-center">
                     <button
