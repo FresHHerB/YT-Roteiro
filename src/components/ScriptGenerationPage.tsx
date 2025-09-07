@@ -66,6 +66,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   const [scriptIdea, setScriptIdea] = useState('');
   const [language, setLanguage] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
+  const [generatedTitle, setGeneratedTitle] = useState('');
   const [generatedScript, setGeneratedScript] = useState('');
   const [audioSpeed, setAudioSpeed] = useState(1.0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -316,7 +317,11 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         const result = await response.json();
         console.log('✅ Resposta recebida:', result);
         
-        const scriptContent = result[0]?.output || result.output || result.roteiro || 'Roteiro gerado com sucesso!';
+        const responseData = result[0] || result;
+        const titleContent = responseData.titulo || '';
+        const scriptContent = responseData.output || responseData.roteiro || 'Roteiro gerado com sucesso!';
+        
+        setGeneratedTitle(titleContent);
         setGeneratedScript(scriptContent);
         setMessage({ type: 'success', text: 'Roteiro gerado com sucesso!' });
       } else {
@@ -806,11 +811,33 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
           {/* Generated Script */}
           <div className="bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800 p-8">
             <div className="mb-6">
-              <h2 className="text-2xl font-light text-white mb-2">Roteiro Gerado</h2>
-              <p className="text-gray-400 text-sm">Edite o roteiro conforme necessário</p>
+              <h2 className="text-2xl font-light text-white mb-2">Conteúdo Gerado</h2>
+              <p className="text-gray-400 text-sm">Edite o título e roteiro conforme necessário</p>
             </div>
             
             <div className="space-y-4">
+              {/* Generated Title */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  Título Gerado
+                </label>
+                <input
+                  type="text"
+                  value={generatedTitle}
+                  onChange={(e) => setGeneratedTitle(e.target.value)}
+                  placeholder="O título gerado aparecerá aqui..."
+                  className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
+                />
+                <div className="text-xs text-gray-400 text-right">
+                  {generatedTitle.length.toLocaleString()} caracteres
+                </div>
+              </div>
+              
+              {/* Generated Script */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  Roteiro Gerado
+                </label>
               <textarea
                 value={generatedScript}
                 onChange={(e) => setGeneratedScript(e.target.value)}
@@ -819,6 +846,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
               />
               <div className="text-xs text-gray-400 text-right">
                 {generatedScript.length.toLocaleString()} caracteres
+              </div>
               </div>
               
               {/* Save Script Button */}
