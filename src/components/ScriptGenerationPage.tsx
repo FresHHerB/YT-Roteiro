@@ -1156,7 +1156,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
             </div>
           </div>
         );
-      })}
+      )}
     </div>
   )}
 </div>
