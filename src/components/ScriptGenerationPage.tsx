@@ -12,7 +12,10 @@ import {
   Volume2,
   BookOpen,
   Edit3,
-  Settings
+  Settings,
+  X,
+  Video,
+  Trash2
 } from 'lucide-react';
 
 interface Channel {
@@ -42,6 +45,19 @@ interface ScriptGenerationPageProps {
   onNavigate?: (page: string) => void;
 }
 
+interface SavedScript {
+  id: number;
+  roteiro: string;
+  canal_id: number;
+  created_at: string;
+}
+
+interface ChannelWithScripts {
+  id: number;
+  nome_canal: string;
+  scripts: SavedScript[];
+}
+
 const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBack, onNavigate }) => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [voices, setVoices] = useState<Voice[]>([]);
@@ -61,6 +77,11 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [testingVoices, setTestingVoices] = useState<Set<number>>(new Set());
   const [isSavingScript, setIsSavingScript] = useState(false);
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [savedScripts, setSavedScripts] = useState<SavedScript[]>([]);
+  const [channelsWithScripts, setChannelsWithScripts] = useState<ChannelWithScripts[]>([]);
+  const [isLoadingScripts, setIsLoadingScripts] = useState(false);
+  const [isDeletingScript, setIsDeletingScript] = useState<number | null>(null);
   
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [playingAudio, setPlayingAudio] = useState<{ id: string; audio: HTMLAudioElement } | null>(null);
@@ -350,6 +371,90 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
       setMessage({ type: 'error', text: 'Erro ao salvar roteiro. Tente novamente.' });
     } finally {
       setIsSavingScript(false);
+    }
+  };
+
+  const loadSavedScripts = async () => {
+    setIsLoadingScripts(true);
+    try {
+      const { data, error } = await supabase
+        .from('roteiros')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao carregar roteiros:', error);
+        setMessage({ type: 'error', text: 'Erro ao carregar roteiros salvos.' });
+        return;
+      }
+
+      setSavedScripts(data || []);
+      
+      // Agrupar roteiros por canal
+      const channelGroups: { [key: number]: ChannelWithScripts } = {};
+      
+      (data || []).forEach((script: SavedScript) => {
+        if (!channelGroups[script.canal_id]) {
+          const channel = channels.find(c => c.id === script.canal_id);
+          channelGroups[script.canal_id] = {
+            id: script.canal_id,
+            nome_canal: channel?.nome_canal || `Canal ${script.canal_id}`,
+            scripts: []
+          };
+        }
+        channelGroups[script.canal_id].scripts.push(script);
+      });
+      
+      setChannelsWithScripts(Object.values(channelGroups));
+    } catch (err) {
+      console.error('Erro ao carregar roteiros:', err);
+      setMessage({ type: 'error', text: 'Erro de conexão ao carregar roteiros.' });
+    } finally {
+      setIsLoadingScripts(false);
+    }
+  };
+
+  const openLoadModal = () => {
+    setShowLoadModal(true);
+    loadSavedScripts();
+  };
+
+  const closeLoadModal = () => {
+    setShowLoadModal(false);
+    setSavedScripts([]);
+    setChannelsWithScripts([]);
+  };
+
+  const loadScript = (script: SavedScript) => {
+    setGeneratedScript(script.roteiro);
+    closeLoadModal();
+    setMessage({ type: 'success', text: 'Roteiro carregado com sucesso!' });
+  };
+
+  const deleteScript = async (scriptId: number) => {
+    if (!confirm('Tem certeza que deseja excluir este roteiro?')) return;
+
+    setIsDeletingScript(scriptId);
+    try {
+      const { error } = await supabase
+        .from('roteiros')
+        .delete()
+        .eq('id', scriptId);
+
+      if (error) {
+        console.error('Erro ao excluir roteiro:', error);
+        setMessage({ type: 'error', text: 'Erro ao excluir roteiro.' });
+        return;
+      }
+
+      // Recarregar a lista
+      loadSavedScripts();
+      setMessage({ type: 'success', text: 'Roteiro excluído com sucesso!' });
+    } catch (err) {
+      console.error('Erro ao excluir roteiro:', err);
+      setMessage({ type: 'error', text: 'Erro de conexão ao excluir roteiro.' });
+    } finally {
+      setIsDeletingScript(null);
     }
   };
 
@@ -714,7 +819,14 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
               </div>
               
               {/* Save Script Button */}
-              <div className="flex justify-center">
+              <div className="flex justify-center space-x-4">
+                <button
+                  onClick={openLoadModal}
+                  className="flex items-center space-x-3 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform bg-gray-700 text-white hover:bg-gray-600 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
+                >
+                  <Download className="w-5 h-5 rotate-180" />
+                  <span>Carregar Roteiro</span>
+                </button>
                 <button
                   onClick={saveScript}
                   disabled={!generatedScript.trim() || !selectedChannelId || isSavingScript}
@@ -911,6 +1023,133 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
           </div>
         </div>
       </div>
+
+      {/* Load Script Modal */}
+      {showLoadModal && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-50"
+          onClick={closeLoadModal}
+        >
+          <div 
+            className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-4xl h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-700 flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+                  <Download className="w-6 h-6 text-white rotate-180" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-light text-white">Carregar Roteiro</h2>
+                  <p className="text-gray-400 text-sm">Selecione um roteiro salvo para carregar</p>
+                </div>
+              </div>
+              <button
+                onClick={closeLoadModal}
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-all duration-200"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {isLoadingScripts ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="flex items-center space-x-3 text-gray-400">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span>Carregando roteiros...</span>
+                  </div>
+                </div>
+              ) : channelsWithScripts.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <Download className="w-8 h-8 text-gray-400 rotate-180" />
+                  </div>
+                  <h3 className="text-xl font-light text-white mb-2">Nenhum roteiro encontrado</h3>
+                  <p className="text-gray-400">Salve alguns roteiros primeiro para poder carregá-los</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {channelsWithScripts.map((channelGroup, index) => {
+                    const borderColors = [
+                      'border-blue-500',
+                      'border-purple-500',
+                      'border-pink-500',
+                      'border-indigo-500',
+                      'border-cyan-500',
+                      'border-orange-500',
+                      'border-red-500',
+                      'border-yellow-500',
+                      'border-teal-500',
+                      'border-violet-500'
+                    ];
+                    const borderColor = borderColors[index % borderColors.length];
+                    
+                    return (
+                      <div key={channelGroup.id} className={`border-l-4 ${borderColor} bg-gray-800/50 rounded-r-xl p-6`}>
+                        <h3 className="text-lg font-medium text-white mb-4 flex items-center space-x-2">
+                          <Video className="w-5 h-5" />
+                          <span>{channelGroup.nome_canal}</span>
+                          <span className="text-sm text-gray-400">({channelGroup.scripts.length} roteiros)</span>
+                        </h3>
+                        
+                        <div className="space-y-3">
+                          {channelGroup.scripts.map((script) => (
+                            <div key={script.id} className="bg-gray-700/50 rounded-lg p-4 hover:bg-gray-700/70 transition-all duration-200">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 cursor-pointer" onClick={() => loadScript(script)}>
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <span className="text-sm text-gray-400">
+                                      {new Date(script.created_at).toLocaleDateString('pt-BR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </span>
+                                    <span className="text-xs text-gray-500">•</span>
+                                    <span className="text-xs text-gray-500">{script.roteiro.length} caracteres</span>
+                                  </div>
+                                  <p className="text-gray-300 text-sm line-clamp-3 hover:text-white transition-colors">
+                                    {script.roteiro.substring(0, 200)}
+                                    {script.roteiro.length > 200 && '...'}
+                                  </p>
+                                </div>
+                                
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteScript(script.id);
+                                  }}
+                                  disabled={isDeletingScript === script.id}
+                                  className={`ml-4 p-2 rounded-lg transition-all duration-200 ${
+                                    isDeletingScript === script.id
+                                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                      : 'text-gray-400 hover:text-red-400 hover:bg-red-900/20'
+                                  }`}
+                                >
+                                  {isDeletingScript === script.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
