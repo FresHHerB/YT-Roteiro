@@ -200,7 +200,30 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
       if (response.ok) {
         const result = await response.json();
         console.log('✅ Prompt atualizado com sucesso:', result);
-        setModalMessage({ type: 'success', text: 'Prompt atualizado com sucesso!' });
+        
+        // Processar resposta do webhook
+        if (result && result.length > 0) {
+          const updatedData = result[0];
+          
+          // Atualizar os prompts com os dados retornados
+          if (updatedData.prompt_titulo) {
+            setEditedTitlePrompt(updatedData.prompt_titulo);
+          }
+          if (updatedData.prompt_roteiro) {
+            setEditedScriptPrompt(updatedData.prompt_roteiro);
+          }
+          if (updatedData.voz_prefereida) {
+            setSelectedVoiceId(updatedData.voz_prefereida);
+          }
+          if (updatedData.media_chars) {
+            setMediaChars(updatedData.media_chars.toString());
+          }
+          
+          setModalMessage({ type: 'success', text: 'Prompt atualizado com sucesso! Dados sincronizados.' });
+        } else {
+          setModalMessage({ type: 'success', text: 'Prompt atualizado com sucesso!' });
+        }
+        
         loadChannels(); // Refresh the channels list
       } else {
         throw new Error(`Erro ${response.status}: ${response.statusText}`);

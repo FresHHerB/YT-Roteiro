@@ -194,7 +194,23 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
       if (response.ok) {
         const result = await response.json();
         console.log('✅ Prompt atualizado com sucesso:', result);
-        setModalMessage({ type: 'success', text: 'Prompt atualizado com sucesso!' });
+        
+        // Processar resposta do webhook
+        if (result && result.length > 0) {
+          const updatedData = result[0];
+          
+          // Atualizar os prompts com os dados retornados
+          if (updatedData.prompt_titulo) {
+            setEditedTitlePrompt(updatedData.prompt_titulo);
+          }
+          if (updatedData.prompt_roteiro) {
+            setEditedScriptPrompt(updatedData.prompt_roteiro);
+          }
+          
+          setModalMessage({ type: 'success', text: 'Prompt atualizado com sucesso! Dados sincronizados.' });
+        } else {
+          setModalMessage({ type: 'success', text: 'Prompt atualizado com sucesso!' });
+        }
       } else {
         throw new Error('Falha na atualização do prompt');
       }
