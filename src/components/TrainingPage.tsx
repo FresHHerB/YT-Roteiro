@@ -377,7 +377,7 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
       console.log('🚀 Iniciando atualização de prompt...');
       
       const payload = {
-        id_canal: null,
+       id_canal: promptData.id || null,
         prompt_titulo: editedTitlePrompt,
         prompt_roteiro: editedScriptPrompt,
         nome_canal: promptData.channelName,
