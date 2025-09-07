@@ -745,8 +745,8 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
           {/* Voice Selection */}
           <div className="bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800 p-8">
             <div className="mb-6">
-              <h2 className="text-2xl font-light text-white mb-2">Seleção de Voz</h2>
-              <p className="text-gray-400 text-sm">Escolha a voz para narrar o roteiro</p>
+              <h2 className="text-2xl font-light text-white mb-2">Gerar Áudio</h2>
+              <p className="text-gray-400 text-sm">Escolha a voz e gere o áudio do roteiro</p>
             </div>
             
             {isLoadingVoices ? (
@@ -831,17 +831,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                   </div>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Audio Generation */}
-          <div className="bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800 p-8">
-            <div className="mb-6">
-              <h2 className="text-2xl font-light text-white mb-2">Gerar Áudio</h2>
-              <p className="text-gray-400 text-sm">Transforme seu roteiro em áudio</p>
-            </div>
-            
-            <div className="space-y-6">
               {/* Generate Button */}
               <div className="flex justify-center">
                 <button
@@ -916,7 +906,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                   </audio>
                 </div>
               )}
-            </div>
+            )}
           </div>
         </div>
       </div>
