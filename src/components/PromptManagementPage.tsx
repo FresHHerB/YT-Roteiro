@@ -51,7 +51,8 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
   const [isLoadingChannels, setIsLoadingChannels] = useState(true);
   const [isLoadingVoices, setIsLoadingVoices] = useState(true);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
-  const [editedPrompt, setEditedPrompt] = useState('');
+  const [editedTitlePrompt, setEditedTitlePrompt] = useState('');
+  const [editedScriptPrompt, setEditedScriptPrompt] = useState('');
   const [selectedVoiceId, setSelectedVoiceId] = useState<number | null>(null);
   const [mediaChars, setMediaChars] = useState<string>('');
   const [isUpdatingPrompt, setIsUpdatingPrompt] = useState(false);
@@ -152,7 +153,8 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
 
   const openChannelModal = (channel: Channel) => {
     setSelectedChannel(channel);
-    setEditedPrompt(channel.prompt_roteiro || '');
+    setEditedTitlePrompt(channel.prompt_titulo || '');
+    setEditedScriptPrompt(channel.prompt_roteiro || '');
     setSelectedVoiceId(channel.voz_prefereida || null);
     setMediaChars(channel.media_chars?.toString() || '');
     setModalMessage(null);
@@ -160,7 +162,8 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
 
   const closeModal = () => {
     setSelectedChannel(null);
-    setEditedPrompt('');
+    setEditedTitlePrompt('');
+    setEditedScriptPrompt('');
     setSelectedVoiceId(null);
     setMediaChars('');
     setModalMessage(null);
@@ -174,7 +177,8 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
     try {
       // Update the channel data directly in Supabase
       const updateData: any = {
-        prompt_roteiro: editedPrompt
+        prompt_titulo: editedTitlePrompt,
+        prompt_roteiro: editedScriptPrompt
       };
 
       if (selectedVoiceId !== null) {
@@ -200,7 +204,8 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
       // Update local state
       setSelectedChannel(prev => prev ? {
         ...prev,
-        prompt_roteiro: editedPrompt,
+        prompt_titulo: editedTitlePrompt,
+        prompt_roteiro: editedScriptPrompt,
         voz_prefereida: selectedVoiceId || prev.voz_prefereida,
         media_chars: mediaChars ? parseFloat(mediaChars) : prev.media_chars
       } : null);
@@ -349,23 +354,25 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
   };
 
   const copyToClipboard = async () => {
-    if (editedPrompt) {
+    const combinedPrompts = `=== PROMPT DE TÍTULO ===\n${editedTitlePrompt}\n\n=== PROMPT DE ROTEIRO ===\n${editedScriptPrompt}`;
+    if (combinedPrompts) {
       try {
-        await navigator.clipboard.writeText(editedPrompt);
-        setModalMessage({ type: 'success', text: 'Prompt copiado para a área de transferência!' });
+        await navigator.clipboard.writeText(combinedPrompts);
+        setModalMessage({ type: 'success', text: 'Prompts copiados para a área de transferência!' });
       } catch (err) {
-        setModalMessage({ type: 'error', text: 'Erro ao copiar prompt.' });
+        setModalMessage({ type: 'error', text: 'Erro ao copiar prompts.' });
       }
     }
   };
 
   const downloadPrompt = () => {
-    if (editedPrompt && selectedChannel) {
-      const blob = new Blob([editedPrompt], { type: 'text/plain' });
+    const combinedPrompts = `=== PROMPT DE TÍTULO ===\n${editedTitlePrompt}\n\n=== PROMPT DE ROTEIRO ===\n${editedScriptPrompt}`;
+    if (combinedPrompts && selectedChannel) {
+      const blob = new Blob([combinedPrompts], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `prompt-${selectedChannel.nome_canal}-${new Date().toISOString().split('T')[0]}.txt`;
+      a.download = `prompts-${selectedChannel.nome_canal}-${new Date().toISOString().split('T')[0]}.txt`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -569,18 +576,44 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
               </div>
 
               {/* Editable Prompt Content */}
-              <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-300">
-                  Conteúdo do Prompt
-                </label>
-                <textarea
-                  value={editedPrompt}
-                  onChange={(e) => setEditedPrompt(e.target.value)}
-                  className="w-full h-80 p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 text-sm font-mono resize-none"
-                  placeholder="Conteúdo do prompt..."
-                />
-                <div className="text-xs text-gray-400">
-                  {editedPrompt.length.toLocaleString()} caracteres
+              {/* Split Layout for Both Prompts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Title Prompt */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <label className="block text-sm font-medium text-gray-300">
+                      Prompt de Título
+                    </label>
+                  </div>
+                  <textarea
+                    value={editedTitlePrompt}
+                    onChange={(e) => setEditedTitlePrompt(e.target.value)}
+                    className="w-full h-64 p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 text-sm font-mono resize-none"
+                    placeholder="Prompt para geração de títulos..."
+                  />
+                  <div className="text-xs text-gray-400">
+                    {editedTitlePrompt.length.toLocaleString()} caracteres
+                  </div>
+                </div>
+
+                {/* Script Prompt */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                    <label className="block text-sm font-medium text-gray-300">
+                      Prompt de Roteiro
+                    </label>
+                  </div>
+                  <textarea
+                    value={editedScriptPrompt}
+                    onChange={(e) => setEditedScriptPrompt(e.target.value)}
+                    className="w-full h-64 p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 text-sm font-mono resize-none"
+                    placeholder="Prompt para geração de roteiros..."
+                  />
+                  <div className="text-xs text-gray-400">
+                    {editedScriptPrompt.length.toLocaleString()} caracteres
+                  </div>
                 </div>
               </div>
 
@@ -720,7 +753,7 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
                   ) : (
                     <>
                       <CheckCircle className="w-4 h-4" />
-                      <span>Atualizar Prompt</span>
+                      <span>Atualizar Prompts</span>
                     </>
                   )}
                 </button>
