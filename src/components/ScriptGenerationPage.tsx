@@ -60,6 +60,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
   const [testingVoices, setTestingVoices] = useState<Set<number>>(new Set());
+  const [isSavingScript, setIsSavingScript] = useState(false);
   
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [playingAudio, setPlayingAudio] = useState<{ id: string; audio: HTMLAudioElement } | null>(null);
@@ -305,6 +306,50 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
       setMessage({ type: 'error', text: 'Erro ao gerar roteiro. Tente novamente.' });
     } finally {
       setIsGeneratingScript(false);
+    }
+  };
+
+  const saveScript = async () => {
+    if (!selectedChannelId || !generatedScript.trim()) {
+      setMessage({ type: 'error', text: 'Selecione um canal e certifique-se de que há conteúdo no roteiro.' });
+      return;
+    }
+
+    setIsSavingScript(true);
+    setMessage(null);
+
+    try {
+      console.log('💾 Iniciando salvamento de roteiro...');
+      
+      const payload = {
+        id_canal: selectedChannelId,
+        roteiro: generatedScript
+      };
+
+      console.log('📤 Payload enviado para salvar roteiro:', payload);
+
+      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook/salvarRoteiro', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      console.log('📡 Response status:', response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Roteiro salvo com sucesso:', result);
+        setMessage({ type: 'success', text: 'Roteiro salvo com sucesso!' });
+      } else {
+        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao salvar roteiro:', error);
+      setMessage({ type: 'error', text: 'Erro ao salvar roteiro. Tente novamente.' });
+    } finally {
+      setIsSavingScript(false);
     }
   };
 
@@ -666,6 +711,33 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
               />
               <div className="text-xs text-gray-400 text-right">
                 {generatedScript.length.toLocaleString()} caracteres
+              </div>
+              
+              {/* Save Script Button */}
+              <div className="flex justify-center">
+                <button
+                  onClick={saveScript}
+                  disabled={!generatedScript.trim() || !selectedChannelId || isSavingScript}
+                  className={`
+                    flex items-center space-x-3 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform
+                    ${!generatedScript.trim() || !selectedChannelId || isSavingScript
+                      ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
+                    }
+                  `}
+                >
+                  {isSavingScript ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Salvando Roteiro...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-5 h-5" />
+                      <span>Salvar Roteiro</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
