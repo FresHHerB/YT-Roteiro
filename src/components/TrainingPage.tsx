@@ -460,7 +460,8 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
     { value: 'GPT-5', label: 'GPT-5', icon: Bot },
     { value: 'GPT-4.1-mini', label: 'GPT-4.1-mini', icon: Bot },
     { value: 'Sonnet-4', label: 'Sonnet-4', icon: Sparkles },
-    { value: 'Gemini-2.5-Pro', label: 'Gemini-2.5-Pro', icon: Wand2 }
+    { value: 'Gemini-2.5-Pro', label: 'Gemini-2.5-Pro', icon: Wand2 },
+    { value: 'Gemini-2.5-Flash', label: 'Gemini-2.5-Flash', icon: Wand2 }
   ] as const;
 
   return (
