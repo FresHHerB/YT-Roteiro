@@ -429,6 +429,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
 
   const loadScript = (script: SavedScript) => {
     setGeneratedScript(script.roteiro);
+    setSelectedChannelId(script.canal_id);
     closeLoadModal();
     setMessage({ type: 'success', text: 'Roteiro carregado com sucesso!' });
   };
