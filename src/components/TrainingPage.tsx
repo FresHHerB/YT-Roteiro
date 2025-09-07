@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { ScriptData, TrainingData } from '../types';
 import { PageType } from '../App';
+import { supabase } from '../lib/supabase';
 
 interface TrainingPageProps {
   user: any;
@@ -43,12 +44,209 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
   const [promptData, setPromptData] = useState<{ 
     channelName: string; 
     prompt_titulo: string; 
-    prompt_roteiro: string; 
+    prompt_roteiro: string;
+    media_chars?: number | null;
   } | null>(null);
   const [editedTitlePrompt, setEditedTitlePrompt] = useState('');
   const [editedScriptPrompt, setEditedScriptPrompt] = useState('');
+  const [selectedVoiceId, setSelectedVoiceId] = useState<number | null>(null);
+  const [mediaChars, setMediaChars] = useState<string>('');
+  const [voices, setVoices] = useState<Voice[]>([]);
+  const [isLoadingVoices, setIsLoadingVoices] = useState(true);
   const [isUpdatingPrompt, setIsUpdatingPrompt] = useState(false);
   const [modalMessage, setModalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [playingAudio, setPlayingAudio] = useState<{ id: string; audio: HTMLAudioElement } | null>(null);
+  const [testingVoices, setTestingVoices] = useState<Set<number>>(new Set());
+
+  // Voice interface
+  interface Voice {
+    id: number;
+    nome_voz: string;
+    voice_id: string;
+    plataforma: string;
+    idioma?: string;
+    genero?: string;
+    preview_url?: string;
+    created_at: string;
+  }
+
+  useEffect(() => {
+    loadVoices();
+  }, []);
+
+  const loadVoices = async () => {
+    setIsLoadingVoices(true);
+    try {
+      const { data, error } = await supabase
+        .from('vozes')
+        .select('*')
+        .order('nome_voz', { ascending: true });
+
+      if (error) {
+        console.error('Erro ao carregar vozes:', error);
+      } else {
+        setVoices(data || []);
+        // Selecionar primeira voz por padrão se houver vozes disponíveis
+        if (data && data.length > 0 && !selectedVoiceId) {
+          setSelectedVoiceId(data[0].id);
+        }
+      }
+    } catch (err) {
+      console.error('Erro de conexão ao carregar vozes:', err);
+    } finally {
+      setIsLoadingVoices(false);
+    }
+  };
+
+  // Audio control functions
+  const playAudio = (audioUrl: string, audioId: string) => {
+    if (playingAudio) {
+      playingAudio.audio.pause();
+      playingAudio.audio.currentTime = 0;
+    }
+
+    const audio = new Audio(audioUrl);
+    
+    audio.addEventListener('ended', () => {
+      setPlayingAudio(null);
+    });
+
+    audio.addEventListener('error', () => {
+      setPlayingAudio(null);
+      setModalMessage({ type: 'error', text: 'Erro ao reproduzir áudio' });
+    });
+
+    audio.play().then(() => {
+      setPlayingAudio({ id: audioId, audio });
+    }).catch(() => {
+      setModalMessage({ type: 'error', text: 'Erro ao reproduzir áudio' });
+    });
+  };
+
+  const pauseAudio = () => {
+    if (playingAudio) {
+      playingAudio.audio.pause();
+      playingAudio.audio.currentTime = 0;
+      setPlayingAudio(null);
+    }
+  };
+
+  const isAudioPlaying = (audioId: string) => {
+    return playingAudio?.id === audioId;
+  };
+
+  // Generate voice test audio
+  const generateVoiceTest = async (voiceId: number): Promise<string> => {
+    try {
+      const voice = voices.find(v => v.id === voiceId);
+      if (!voice) {
+        throw new Error('Voz não encontrada');
+      }
+
+      if (voice.plataforma === 'ElevenLabs') {
+        const { data: apisData } = await supabase
+          .from('apis')
+          .select('*')
+          .eq('plataforma', voice.plataforma)
+          .single();
+
+        if (!apisData) {
+          throw new Error(`API key não encontrada para ${voice.plataforma}`);
+        }
+
+        const response = await fetch(`https://api.elevenlabs.io/v1/voices/${voice.voice_id}`, {
+          method: 'GET',
+          headers: {
+            'xi-api-key': apisData.api_key
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro ElevenLabs: ${response.status} - ${errorText}`);
+        }
+
+        const voiceData = await response.json();
+        
+        if (!voiceData.preview_url) {
+          throw new Error('Nenhum preview de áudio disponível para esta voz ElevenLabs');
+        }
+        
+        return voiceData.preview_url;
+
+      } else if (voice.plataforma === 'Fish-Audio') {
+        const { data: apisData } = await supabase
+          .from('apis')
+          .select('*')
+          .eq('plataforma', voice.plataforma)
+          .single();
+
+        if (!apisData) {
+          throw new Error(`API key não encontrada para ${voice.plataforma}`);
+        }
+
+        const response = await fetch(`https://api.fish.audio/model/${voice.voice_id}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${apisData.api_key}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro Fish-Audio: ${response.status} - ${errorText}`);
+        }
+
+        const modelData = await response.json();
+        
+        if (!modelData.samples || modelData.samples.length === 0) {
+          throw new Error('Nenhum sample de áudio disponível para esta voz Fish-Audio');
+        }
+        
+        const sampleAudioUrl = modelData.samples[0].audio;
+        if (!sampleAudioUrl) {
+          throw new Error('URL de áudio do sample não encontrada');
+        }
+        
+        return sampleAudioUrl;
+      }
+
+      throw new Error('Plataforma não suportada para teste');
+    } catch (error) {
+      console.error('Erro ao gerar teste de voz:', error);
+      throw error;
+    }
+  };
+
+  const playSelectedVoicePreview = () => {
+    if (!selectedVoiceId) return;
+
+    const audioId = `voice-preview-${selectedVoiceId}`;
+    
+    if (isAudioPlaying(audioId)) {
+      pauseAudio();
+      return;
+    }
+
+    setTestingVoices(prev => new Set(prev).add(selectedVoiceId));
+
+    generateVoiceTest(selectedVoiceId)
+      .then(audioUrl => {
+        playAudio(audioUrl, audioId);
+      })
+      .catch(error => {
+        console.error('Erro no teste de voz:', error);
+        setModalMessage({ type: 'error', text: error instanceof Error ? error.message : 'Erro ao testar voz' });
+      })
+      .finally(() => {
+        setTestingVoices(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(selectedVoiceId);
+          return newSet;
+        });
+      });
+  };
 
   const updateScript = (scriptKey: keyof TrainingData['scripts'], data: Partial<ScriptData>) => {
     setTrainingData(prev => ({
@@ -134,10 +332,16 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
         setPromptData({ 
           channelName: trainingData.channelName, 
           prompt_titulo: titlePrompt,
-          prompt_roteiro: scriptPrompt
+          prompt_roteiro: scriptPrompt,
+          media_chars: responseData.media_chars || null
         });
         setEditedTitlePrompt(titlePrompt);
         setEditedScriptPrompt(scriptPrompt);
+        setMediaChars(responseData.media_chars ? responseData.media_chars.toString() : '');
+        // Selecionar primeira voz se não houver uma selecionada
+        if (voices.length > 0 && !selectedVoiceId) {
+          setSelectedVoiceId(voices[0].id);
+        }
         setShowPromptModal(true);
         setModalMessage(null);
         setMessage({ type: 'success', text: 'Treinamento enviado com sucesso!' });
@@ -171,12 +375,12 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
       console.log('🚀 Iniciando atualização de prompt...');
       
       const payload = {
-        id_canal: null, // Será definido pelo webhook baseado no nome do canal
+        id_canal: null,
         prompt_titulo: editedTitlePrompt,
         prompt_roteiro: editedScriptPrompt,
-        nome_canal: promptData.channelName, // Para identificar o canal
-        id_voz: null, // Não disponível no contexto de treinamento
-        media_chars: null // Não disponível no contexto de treinamento
+        nome_canal: promptData.channelName,
+        id_voz: selectedVoiceId,
+        media_chars: mediaChars ? parseFloat(mediaChars) : null
       };
 
       console.log('📤 Payload enviado:', payload);
@@ -205,6 +409,9 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
           }
           if (updatedData.prompt_roteiro) {
             setEditedScriptPrompt(updatedData.prompt_roteiro);
+          }
+          if (updatedData.media_chars) {
+            setMediaChars(updatedData.media_chars.toString());
           }
           
           setModalMessage({ type: 'success', text: 'Prompt atualizado com sucesso! Dados sincronizados.' });
@@ -553,6 +760,95 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
                   />
                   <div className="text-xs text-gray-400">
                     {editedScriptPrompt.length.toLocaleString()} caracteres
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Voice Preference and Media Characters - Footer Section */}
+            <div className="p-5 border-t border-gray-700 bg-gray-900/50">
+              {/* Voice Preference and Media Characters - Same Line */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Voice Preference */}
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Voz Preferida
+                  </label>
+                  {isLoadingVoices ? (
+                    <div className="flex items-center space-x-2 p-3 bg-gray-800 border border-gray-600 rounded-lg">
+                      <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                      <span className="text-gray-400 text-sm">Carregando vozes...</span>
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedVoiceId || ''}
+                      onChange={(e) => setSelectedVoiceId(e.target.value ? parseInt(e.target.value) : null)}
+                      className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white"
+                    >
+                      <option value="">Selecione uma voz</option>
+                      {voices.map((voice) => (
+                        <option key={voice.id} value={voice.id}>
+                          {voice.nome_voz} - {voice.plataforma}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <div className="text-xs text-gray-400">
+                    Voz que será usada para gerar áudios deste canal
+                  </div>
+                  
+                  {/* Voice Preview Button */}
+                  {selectedVoiceId && (
+                    <div className="mt-2">
+                      <button
+                        onClick={playSelectedVoicePreview}
+                        disabled={selectedVoiceId ? testingVoices.has(selectedVoiceId) : false}
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                          selectedVoiceId && testingVoices.has(selectedVoiceId)
+                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                            : isAudioPlaying(`voice-preview-${selectedVoiceId}`)
+                            ? 'bg-red-600 hover:bg-red-700 text-white'
+                            : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`}
+                      >
+                        {selectedVoiceId && testingVoices.has(selectedVoiceId) ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Carregando...</span>
+                          </>
+                        ) : isAudioPlaying(`voice-preview-${selectedVoiceId}`) ? (
+                          <>
+                            <Square className="w-4 h-4" />
+                            <span>Parar</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4" />
+                            <span>Testar Voz</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Media Characters */}
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-300">
+                    Média de Caracteres
+                  </label>
+                  <input
+                    type="number"
+                    value={mediaChars}
+                    onChange={(e) => setMediaChars(e.target.value)}
+                    placeholder="Ex: 1500"
+                    min="0"
+                    step="1"
+                    maxLength={8}
+                    className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
+                  />
+                  <div className="text-xs text-gray-400">
+                    Número médio de caracteres dos roteiros deste canal
                   </div>
                 </div>
               </div>
