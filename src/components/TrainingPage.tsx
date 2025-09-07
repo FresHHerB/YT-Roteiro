@@ -15,7 +15,9 @@ import {
   Download,
   Edit3,
   Mic,
-  Settings
+  Settings,
+  Play,
+  Square
 } from 'lucide-react';
 import { ScriptData, TrainingData } from '../types';
 import { PageType } from '../App';
