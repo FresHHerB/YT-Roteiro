@@ -89,7 +89,8 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
         } else if (script.file) {
           try {
             return await readFileContent(script.file);
-              onUpdate({ file, type: 'file', text: '' });
+          } catch (error) {
+            console.error("Error reading file:", error);
             return '';
           }
         }
