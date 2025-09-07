@@ -550,14 +550,15 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="space-y-12">
-          {/* Channel Name */}
+          {/* Scripts Section */}
           <div className="bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800 p-8">
-            <div className="mb-6">
+            <div className="mb-8">
               <h2 className="text-2xl font-light text-white mb-2">Configuração do Canal</h2>
-              <p className="text-gray-400 text-sm">Defina o nome do seu canal para personalizar o treinamento</p>
+              <p className="text-gray-400 text-sm">Defina o nome do canal e adicione até 3 roteiros para treinar o modelo</p>
             </div>
             
-            <div className="space-y-2">
+            {/* Channel Name */}
+            <div className="space-y-2 mb-8">
               <label className="block text-sm font-medium text-gray-300">
                 Nome do Canal
               </label>
@@ -569,15 +570,8 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
                 className="w-full p-4 bg-black border border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
               />
             </div>
-          </div>
-
-          {/* Scripts Section */}
-          <div className="bg-gray-900/50 backdrop-blur-xl rounded-2xl border border-gray-800 p-8">
-            <div className="mb-8">
-              <h2 className="text-2xl font-light text-white mb-2">Roteiros de Referência</h2>
-              <p className="text-gray-400 text-sm">Adicione até 3 roteiros para treinar o modelo com seu estilo</p>
-            </div>
             
+            {/* Scripts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {Object.entries(trainingData.scripts).map(([key, script], index) => (
                 <ScriptInputCard
