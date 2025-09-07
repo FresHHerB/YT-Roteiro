@@ -349,7 +349,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
 
       console.log('📤 Payload enviado para salvar roteiro:', payload);
 
-      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook-test/salvarRoteiro', {
+      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook/salvarRoteiro', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
