@@ -327,11 +327,13 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
 
       if (response.ok) {
         const result = await response.json();
-        const responseData = result[0] || {};
+        const responseData = result[0] || result || {};
         const titlePrompt = responseData.prompt_titulo || 'Prompt de título não encontrado';
         const scriptPrompt = responseData.prompt_roteiro || 'Prompt de roteiro não encontrado';
+        const canalId = responseData.id || null;
         
         setPromptData({ 
+          id: canalId,
           channelName: trainingData.channelName, 
           prompt_titulo: titlePrompt,
           prompt_roteiro: scriptPrompt,
