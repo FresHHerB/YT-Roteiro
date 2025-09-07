@@ -10,6 +10,7 @@ export interface ScriptData {
   text: string;
   file: File | null;
   type: 'text' | 'file';
+  title: string;
 }
 
 export interface TrainingData {

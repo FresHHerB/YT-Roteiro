@@ -30,9 +30,9 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
   const [trainingData, setTrainingData] = useState<TrainingData>({
     channelName: '',
     scripts: {
-      script1: { text: '', file: null, type: 'text' },
-      script2: { text: '', file: null, type: 'text' },
-      script3: { text: '', file: null, type: 'text' },
+      script1: { text: '', file: null, type: 'text', title: '' },
+      script2: { text: '', file: null, type: 'text', title: '' },
+      script3: { text: '', file: null, type: 'text', title: '' },
     },
     model: 'GPT-5'
   });
@@ -89,7 +89,7 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
         } else if (script.file) {
           try {
             return await readFileContent(script.file);
-          } catch (error) {
+              onUpdate({ file, type: 'file', text: '' });
             return '';
           }
         }
@@ -102,8 +102,11 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
 
       const payload = {
         nomeCanal: trainingData.channelName,
+        titulo1: trainingData.scripts.script1.title,
         roteiro1: script1Content,
+        titulo2: trainingData.scripts.script2.title,
         roteiro2: script2Content,
+        titulo3: trainingData.scripts.script3.title,
         roteiro3: script3Content,
         modelo: trainingData.model
       };
@@ -130,9 +133,9 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
         setTrainingData({
           channelName: '',
           scripts: {
-            script1: { text: '', file: null, type: 'text' },
-            script2: { text: '', file: null, type: 'text' },
-            script3: { text: '', file: null, type: 'text' },
+            script1: { text: '', file: null, type: 'text', title: '' },
+            script2: { text: '', file: null, type: 'text', title: '' },
+            script3: { text: '', file: null, type: 'text', title: '' },
           },
           model: 'GPT-5'
         });
@@ -591,7 +594,7 @@ const ScriptInputCard: React.FC<ScriptInputCardProps> = ({ title, script, onUpda
   };
 
   const clearContent = () => {
-    onUpdate({ text: '', file: null, type: 'text' });
+    onUpdate({ text: '', file: null, type: 'text', title: '' });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -661,11 +664,25 @@ const ScriptInputCard: React.FC<ScriptInputCardProps> = ({ title, script, onUpda
 
       {/* Card Content */}
       <div className="p-4">
+        {/* Title Field */}
+        <div className="space-y-2 mb-4">
+          <label className="block text-sm font-medium text-gray-300">
+            Título do {title}
+          </label>
+          <input
+            type="text"
+            value={script.title}
+            onChange={(e) => onUpdate({ title: e.target.value })}
+            placeholder="Digite o título do roteiro..."
+            className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
+          />
+        </div>
+
         {script.type === 'text' ? (
           <div className="space-y-3">
             <textarea
               value={script.text}
-              onChange={(e) => onUpdate({ text: e.target.value, type: 'text', file: null })}
+              onChange={(e) => onUpdate({ text: e.target.value })}
               placeholder="Cole o conteúdo do roteiro aqui..."
               className="w-full h-32 p-3 bg-black border border-gray-700 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 text-sm"
             />
