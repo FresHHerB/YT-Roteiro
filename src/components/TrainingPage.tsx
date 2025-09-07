@@ -456,7 +456,7 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
             </div>
 
             {/* Modal Content */}
-            <div className="p-5 space-y-4 flex-1 overflow-y-auto">
+            <div className="p-5 flex-1 flex flex-col overflow-hidden">
               {/* Success Message */}
               {modalMessage && (
                 <div className={`p-4 rounded-xl text-center border ${
@@ -476,7 +476,7 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
               )}
 
               {/* Channel Name (Read-only) */}
-              <div className="space-y-1">
+              <div className="space-y-1 mb-4">
                 <label className="block text-sm font-medium text-gray-300">
                   Nome do Canal
                 </label>
@@ -489,9 +489,9 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
               </div>
 
               {/* Split Layout for Both Prompts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
                 {/* Title Prompt */}
-                <div className="space-y-2">
+                <div className="space-y-2 flex flex-col">
                   <div className="flex items-center space-x-2 mb-3">
                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                     <label className="block text-sm font-medium text-gray-300">
@@ -501,7 +501,7 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
                   <textarea
                     value={editedTitlePrompt}
                     onChange={(e) => setEditedTitlePrompt(e.target.value)}
-                    className="w-full h-64 p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 text-sm font-mono resize-none"
+                    className="w-full flex-1 p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 text-sm font-mono resize-none"
                     placeholder="Prompt para geração de títulos..."
                   />
                   <div className="text-xs text-gray-400">
@@ -510,7 +510,7 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
                 </div>
 
                 {/* Script Prompt */}
-                <div className="space-y-2">
+                <div className="space-y-2 flex flex-col">
                   <div className="flex items-center space-x-2 mb-3">
                     <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
                     <label className="block text-sm font-medium text-gray-300">
@@ -520,7 +520,7 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
                   <textarea
                     value={editedScriptPrompt}
                     onChange={(e) => setEditedScriptPrompt(e.target.value)}
-                    className="w-full h-64 p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 text-sm font-mono resize-none"
+                    className="w-full flex-1 p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500 text-sm font-mono resize-none"
                     placeholder="Prompt para geração de roteiros..."
                   />
                   <div className="text-xs text-gray-400">
@@ -531,7 +531,7 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between p-5 border-t border-gray-700 flex-shrink-0">
+            <div className="flex items-center justify-between p-5 border-t border-gray-700 flex-shrink-0 bg-gray-900">
               <div className="flex items-center space-x-3">
                 <button
                   onClick={copyToClipboard}
