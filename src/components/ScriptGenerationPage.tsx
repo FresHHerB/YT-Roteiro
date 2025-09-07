@@ -50,6 +50,7 @@ interface SavedScript {
   roteiro: string;
   canal_id: number;
   created_at: string;
+  titulo?: string;
 }
 
 interface ChannelWithScripts {
@@ -336,8 +337,8 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   };
 
   const saveScript = async () => {
-    if (!selectedChannelId || !generatedScript.trim()) {
-      setMessage({ type: 'error', text: 'Selecione um canal e certifique-se de que há conteúdo no roteiro.' });
+    if (!selectedChannelId || !generatedScript.trim() || !generatedTitle.trim()) {
+      setMessage({ type: 'error', text: 'Selecione um canal e certifique-se de que há título e conteúdo no roteiro.' });
       return;
     }
 
@@ -349,7 +350,8 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
       
       const payload = {
         id_canal: selectedChannelId,
-        roteiro: generatedScript
+        roteiro: generatedScript,
+        titulo: generatedTitle
       };
 
       console.log('📤 Payload enviado para salvar roteiro:', payload);
@@ -433,10 +435,11 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   };
 
   const loadScript = (script: SavedScript) => {
+    setGeneratedTitle(script.titulo || '');
     setGeneratedScript(script.roteiro);
     setSelectedChannelId(script.canal_id);
     closeLoadModal();
-    setMessage({ type: 'success', text: 'Roteiro carregado com sucesso!' });
+    setMessage({ type: 'success', text: 'Título e roteiro carregados com sucesso!' });
   };
 
   const deleteScript = async (scriptId: number) => {
@@ -860,10 +863,10 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                 </button>
                 <button
                   onClick={saveScript}
-                  disabled={!generatedScript.trim() || !selectedChannelId || isSavingScript}
+                  disabled={!generatedScript.trim() || !generatedTitle.trim() || !selectedChannelId || isSavingScript}
                   className={`
                     flex items-center space-x-3 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform
-                    ${!generatedScript.trim() || !selectedChannelId || isSavingScript
+                    ${!generatedScript.trim() || !generatedTitle.trim() || !selectedChannelId || isSavingScript
                       ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
                       : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
                     }
@@ -1173,6 +1176,13 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                                     {script.roteiro.length} chars
                                   </span>
                                 </div>
+                                
+                                {/* Title Preview */}
+                                {script.titulo && (
+                                  <h4 className="text-white text-sm font-medium mb-2 line-clamp-1">
+                                    {script.titulo}
+                                  </h4>
+                                )}
                                 
                                 {/* Script Preview */}
                                 <p className="text-gray-300 text-sm line-clamp-3 hover:text-white transition-colors">
