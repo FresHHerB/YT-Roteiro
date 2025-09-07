@@ -433,7 +433,7 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
         >
           <div 
             className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-4xl h-[95vh] overflow-hidden flex flex-col"
-            className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-7xl h-[95vh] overflow-hidden flex flex-col"
+            className="bg-gray-900 rounded-2xl border border-gray-700 w-[80%] h-[95vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}

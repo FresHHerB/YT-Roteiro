@@ -522,7 +522,7 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
         >
           <div 
             className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-4xl h-[95vh] overflow-hidden flex flex-col"
-            className="bg-gray-900 rounded-2xl border border-gray-700 w-full max-w-7xl h-[95vh] overflow-hidden flex flex-col"
+            className="bg-gray-900 rounded-2xl border border-gray-700 w-[80%] h-[95vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -700,6 +700,7 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
                     placeholder="Ex: 1500"
                     min="0"
                     step="1"
+                    maxLength={8}
                     className="w-full p-3 bg-black border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all duration-200 text-white placeholder:text-gray-500"
                   />
                   <div className="text-xs text-gray-400">
