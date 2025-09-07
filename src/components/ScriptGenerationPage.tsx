@@ -757,7 +757,8 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Voice Selection Dropdown */}
                 <div className="flex justify-center">
                   <select
                     value={selectedVoiceId || ''}
@@ -774,7 +775,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                   </select>
                 </div>
 
-              {/* Generate Audio Button */}
+                {/* Voice Test Button */}
                 {selectedVoiceId && (
                   <div className="flex justify-center">
                     <button
@@ -830,7 +831,6 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                     <span>1.2x</span>
                   </div>
                 </div>
-              </div>
 
                 {/* Generate Audio Button */}
                 <div className="flex justify-center">
@@ -906,7 +906,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                     </audio>
                   </div>
                 )}
-              )}
+              </div>
             )}
           </div>
         </div>
