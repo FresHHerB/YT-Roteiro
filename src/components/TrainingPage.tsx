@@ -112,7 +112,7 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
         modelo: trainingData.model
       };
 
-      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook/guiaRoteiro', {
+      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook-test/guiaRoteiro', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
