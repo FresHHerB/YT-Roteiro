@@ -175,44 +175,38 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
     setIsUpdatingPrompt(true);
     setModalMessage(null);
     try {
-      // Update the channel data directly in Supabase
-      const updateData: any = {
-        prompt_titulo: editedTitlePrompt,
-        prompt_roteiro: editedScriptPrompt
-      };
-
-      if (selectedVoiceId !== null) {
-        updateData.voz_prefereida = selectedVoiceId;
-      }
-
-      if (mediaChars.trim()) {
-        const parsedMediaChars = parseFloat(mediaChars);
-        if (!isNaN(parsedMediaChars)) {
-          updateData.media_chars = parsedMediaChars;
-        }
-      }
-
-      const { error: updateError } = await supabase
-        .from('canais')
-        .update(updateData)
-        .eq('id', selectedChannel.id);
-
-      if (updateError) {
-        throw new Error('Erro ao atualizar prompt do canal');
-      }
-
-      // Update local state
-      setSelectedChannel(prev => prev ? {
-        ...prev,
+      console.log('🚀 Iniciando atualização de prompt...');
+      
+      const payload = {
+        id_canal: selectedChannel.id,
         prompt_titulo: editedTitlePrompt,
         prompt_roteiro: editedScriptPrompt,
-        voz_prefereida: selectedVoiceId || prev.voz_prefereida,
-        media_chars: mediaChars ? parseFloat(mediaChars) : prev.media_chars
-      } : null);
-      
-      setModalMessage({ type: 'success', text: 'Prompt atualizado com sucesso!' });
-      loadChannels(); // Refresh the channels list
+        id_voz: selectedVoiceId,
+        media_chars: mediaChars ? parseFloat(mediaChars) : null
+      };
+
+      console.log('📤 Payload enviado:', payload);
+
+      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook/updatePromptRoteiro', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      console.log('📡 Response status:', response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Prompt atualizado com sucesso:', result);
+        setModalMessage({ type: 'success', text: 'Prompt atualizado com sucesso!' });
+        loadChannels(); // Refresh the channels list
+      } else {
+        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+      }
     } catch (err) {
+      console.error('❌ Erro na atualização:', err);
       setModalMessage({ type: 'error', text: 'Erro ao atualizar prompt. Tente novamente.' });
     } finally {
       setIsUpdatingPrompt(false);

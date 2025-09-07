@@ -168,11 +168,18 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
     setIsUpdatingPrompt(true);
     setModalMessage(null);
     try {
+      console.log('🚀 Iniciando atualização de prompt...');
+      
       const payload = {
-        nome_canal: promptData.channelName,
+        id_canal: null, // Será definido pelo webhook baseado no nome do canal
         prompt_titulo: editedTitlePrompt,
-        prompt_roteiro: editedScriptPrompt
+        prompt_roteiro: editedScriptPrompt,
+        nome_canal: promptData.channelName, // Para identificar o canal
+        id_voz: null, // Não disponível no contexto de treinamento
+        media_chars: null // Não disponível no contexto de treinamento
       };
+
+      console.log('📤 Payload enviado:', payload);
 
       const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook/updatePromptRoteiro', {
         method: 'POST',
@@ -182,12 +189,17 @@ const TrainingPage: React.FC<TrainingPageProps> = ({ user, onBack, onNavigate })
         body: JSON.stringify(payload),
       });
 
+      console.log('📡 Response status:', response.status);
+
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Prompt atualizado com sucesso:', result);
         setModalMessage({ type: 'success', text: 'Prompt atualizado com sucesso!' });
       } else {
         throw new Error('Falha na atualização do prompt');
       }
     } catch (err) {
+      console.error('❌ Erro na atualização:', err);
       setModalMessage({ type: 'error', text: 'Erro ao atualizar prompt. Tente novamente.' });
     } finally {
       setIsUpdatingPrompt(false);
