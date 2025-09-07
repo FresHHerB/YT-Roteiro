@@ -377,7 +377,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
   const loadSavedScripts = async () => {
     setIsLoadingScripts(true);
     try {
-      const { data, error } = await supabase
+      const { data: scriptsData, error } = await supabase
         .from('roteiros')
         .select('*')
         .order('created_at', { ascending: false });
@@ -388,12 +388,13 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         return;
       }
 
-      setSavedScripts(data || []);
+      console.log('Scripts carregados:', scriptsData);
+      setSavedScripts(scriptsData || []);
       
       // Agrupar roteiros por canal
       const channelGroups: { [key: number]: ChannelWithScripts } = {};
       
-      (data || []).forEach((script: SavedScript) => {
+      (scriptsData || []).forEach((script: SavedScript) => {
         if (!channelGroups[script.canal_id]) {
           const channel = channels.find(c => c.id === script.canal_id);
           channelGroups[script.canal_id] = {
@@ -405,6 +406,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
         channelGroups[script.canal_id].scripts.push(script);
       });
       
+      console.log('Grupos de canais:', channelGroups);
       setChannelsWithScripts(Object.values(channelGroups));
     } catch (err) {
       console.error('Erro ao carregar roteiros:', err);
