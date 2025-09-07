@@ -187,7 +187,7 @@ const PromptManagementPage: React.FC<PromptManagementPageProps> = ({ user, onBac
 
       console.log('📤 Payload enviado:', payload);
 
-      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook/updatePromptRoteiro', {
+      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook-test/updatePrompts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
