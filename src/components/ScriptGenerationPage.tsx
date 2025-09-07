@@ -832,79 +832,80 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
                 </div>
               </div>
 
-              {/* Generate Button */}
-              <div className="flex justify-center">
-                <button
-                  onClick={generateAudio}
-                  disabled={!generatedScript.trim() || !selectedVoiceId || isGeneratingAudio}
-                  className={`
-                    flex items-center space-x-3 px-8 py-4 rounded-xl font-medium transition-all duration-300 transform
-                    ${!generatedScript.trim() || !selectedVoiceId || isGeneratingAudio
-                      ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
-                      : 'bg-purple-600 text-white hover:bg-purple-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
-                    }
-                  `}
-                >
-                  {isGeneratingAudio ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Gerando Áudio...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="w-5 h-5" />
-                      <span>Gerar Áudio</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Audio Player */}
-              {audioUrl && (
-                <div className="bg-black/50 rounded-xl border border-gray-700 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-white">Áudio Gerado</h3>
-                    <div className="flex items-center space-x-3">
-                      <button
-                        onClick={playGeneratedAudio}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                          isAudioPlaying('generated-audio')
-                            ? 'bg-red-600 hover:bg-red-700 text-white'
-                            : 'bg-green-600 hover:bg-green-700 text-white'
-                        }`}
-                      >
-                        {isAudioPlaying('generated-audio') ? (
-                          <>
-                            <Square className="w-4 h-4" />
-                            <span>Parar</span>
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-4 h-4" />
-                            <span>Reproduzir</span>
-                          </>
-                        )}
-                      </button>
-                      <button
-                        onClick={downloadAudio}
-                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>Download</span>
-                      </button>
-                    </div>
-                  </div>
-                  
-                  {/* Native Audio Player */}
-                  <audio
-                    controls
-                    src={audioUrl}
-                    className="w-full"
-                    style={{ filter: 'invert(1) hue-rotate(180deg)' }}
+                {/* Generate Audio Button */}
+                <div className="flex justify-center">
+                  <button
+                    onClick={generateAudio}
+                    disabled={!generatedScript.trim() || !selectedVoiceId || isGeneratingAudio}
+                    className={`
+                      flex items-center space-x-3 px-8 py-4 rounded-xl font-medium transition-all duration-300 transform
+                      ${!generatedScript.trim() || !selectedVoiceId || isGeneratingAudio
+                        ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
+                        : 'bg-purple-600 text-white hover:bg-purple-700 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl'
+                      }
+                    `}
                   >
-                    Seu navegador não suporta o elemento de áudio.
-                  </audio>
+                    {isGeneratingAudio ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Gerando Áudio...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-5 h-5" />
+                        <span>Gerar Áudio</span>
+                      </>
+                    )}
+                  </button>
                 </div>
+
+                {/* Audio Player */}
+                {audioUrl && (
+                  <div className="bg-black/50 rounded-xl border border-gray-700 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-medium text-white">Áudio Gerado</h3>
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={playGeneratedAudio}
+                          className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                            isAudioPlaying('generated-audio')
+                              ? 'bg-red-600 hover:bg-red-700 text-white'
+                              : 'bg-green-600 hover:bg-green-700 text-white'
+                          }`}
+                        >
+                          {isAudioPlaying('generated-audio') ? (
+                            <>
+                              <Square className="w-4 h-4" />
+                              <span>Parar</span>
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-4 h-4" />
+                              <span>Reproduzir</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={downloadAudio}
+                          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span>Download</span>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Native Audio Player */}
+                    <audio
+                      controls
+                      src={audioUrl}
+                      className="w-full"
+                      style={{ filter: 'invert(1) hue-rotate(180deg)' }}
+                    >
+                      Seu navegador não suporta o elemento de áudio.
+                    </audio>
+                  </div>
+                )}
               )}
             )}
           </div>
