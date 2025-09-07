@@ -302,7 +302,7 @@ const ScriptGenerationPage: React.FC<ScriptGenerationPageProps> = ({ user, onBac
 
       console.log('📤 Payload enviado:', payload);
 
-      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook-test/gerarConteudo', {
+      const response = await fetch('https://n8n-n8n.h5wo9n.easypanel.host/webhook/gerarConteudo', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
