@@ -818,23 +818,6 @@ const ChannelCard: React.FC<ChannelCardProps> = ({ channel, onEdit }) => {
           </div>
         </div>
 
-        {/* Prompt Preview */}
-        <div className="mb-4">
-          <p className="text-xs text-gray-400 mb-2">Preview do Prompt:</p>
-          <div className="bg-black/50 rounded-lg p-3 border border-gray-700">
-            {hasPrompt ? (
-              <p className="text-gray-300 text-xs font-mono line-clamp-3">
-                {channel.prompt_roteiro.substring(0, 150)}
-                {channel.prompt_roteiro.length > 150 && '...'}
-              </p>
-            ) : (
-              <p className="text-gray-500 text-xs italic">
-                Nenhum prompt configurado
-              </p>
-            )}
-          </div>
-        </div>
-
         {/* Footer */}
         <div className="flex justify-end text-xs text-gray-500">
           <span>Criado em {formatDate(channel.created_at)}</span>
